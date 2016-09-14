@@ -1,0 +1,8 @@
+# exclude some directories
+
+# exclude .pyc files
+*.pyc
+*~
+
+# exclude some specific files
+

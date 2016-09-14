@@ -1,0 +1,91 @@
+TO DO (quest) list for SEEKR
+
+Difficulty of implementation estimated on a scale of * to *****, easy to difficult, indicated by the number of asterisks after the description.
+
+Priority:
+
+- Usage on other supercomputers besides Stampede. ***
+
+- Include examples in tutorial for how to get starting structure files. *
+
+- A warning for the user if a SEEKR input keyword doesn't match any known key words to catch mistakes and misspellings. *
+
+- Allow users to specify the number of BD simulations to run after b-surface simulations.
+
+- Develop a tutorial on creating personalized BrownDye files, something more SEEKR-related than Gary's BrownDye Tutorial 12. **
+
+- Change the tutorial to not include Lane's tarred files; determine why he instructed us to do so in the first place. *
+
+- TEMP variable in fwd_rev1.namd for the fwd_rev stage has changed from what was inputed! Figure out what's causing this and fix it. ***
+
+- Determine the true cause of creation of differing number of anchors, and remedy. ***
+
+- Allow users to specify the number of BD simulations to run after b-surface simulations.
+
+- Look into unit test failures in analyze.py. **
+
+- Place fwd-rev restart and trajectory files in another directory so the 'ls' command works faster on Stampede
+
+- Change default executable locations (Browndye, APBS, Inputgen, 
+
+
+Recommended:
+
+- Right now many of the modules of SEEKR write files according to template strings. Examples are control.py, bd.py, and some others (wherever you see multiline strings in the script that are written to file. These strings have been hardcoded in the script, which is bad. Ideally, files would be made in place of these strings, and loaded into the scripts using adv_template.py. Example: namd_input.template. **
+
+- Configuration file for control.py that contains supercomputer info and relevant paths to NAMD and elsewhere. Could be in the SEEKR input file itself somehow. **
+
+- Better script to compile charmrun that is more error-aware and user-friendly. **
+
+- Test SEEKR's version of NAMD once compiled. *
+
+- Rotational milestoning (mostly complete, but needs to be brought to completion). ****
+
+- Grid-based milestones. ****
+
+- K-off rate estimation. *****
+
+- Eliminate control.py's printing of "executing command: sbatch", it can't actually execute sbatch because of Stampede's rules. *
+
+- Find and remedy SEEKR's creation using control.py of the ens_equil files it's writing for the .namd-- it should say ens_equil_0_1.namd > ens_equilwhatever.out, not ens_equil_1.namd **
+
+- Additional control over BD simulations from SEEKR input file (number of trajectories per FHPD point, etc.) **
+
+- A tool to determine the computational cost of the various stages of calculation. **
+
+
+Hoped-for:
+
+- Put FOR loops in adv_template.py ****
+
+- When following the tutorial online, use web design to separate the "Optional" portions of the tutorial and place them in neat, aesthetically pleasing boxes! *
+
+
+
+Systems to try:
+
+- HSP90 with ligand 2-aminopyrimidine (lots of other ligands). This protein is rigid, so a k-on calculation is likely to provide correct answers.
+
+- Insulin with phenol
+
+- Protein kinase A with Cyclic AMP
+
+- Neuraminidase with Tamiflu
+
+- Permeability thru a carbon nanotubule
+
+- Monomeric Sarcosine Oxidase (MSOX) and it's ligand, O2- (superoxide). k_on rates were found experimentally. k_off is very fast (~nanoseconds)! Watch for paper coming out JCTC.
+
+
+
+Completed:
+
+- In control.py, the variable name 'mpi_exec' should probably have the underscore removed because the program name is 'mpiexec'. *
+
+- control.py modify command can now be used to change parameters in a .namd input file
+
+- Eliminate control.py's printing of "executing command: sbatch", it isn't currently. *
+
+- Make resubmits of the fwd_rev stage write standard output to new files. (change the submission script generator in control.py) *
+
+
