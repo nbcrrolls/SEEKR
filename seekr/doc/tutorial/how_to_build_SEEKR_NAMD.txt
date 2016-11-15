@@ -1,0 +1,75 @@
+How to build the proper NAMD build for SEEKR
+
+1. Download the NAMD source code. I'm using NAMD2.10 from the nightly build on Nov 2, 2015.
+
+http://www.ks.uiuc.edu/Development/Download/download.cgi?PackageName=NAMD
+
+2. Compile Charm++ and NAMD
+
+The following steps were modified from the notes.txt file in the NAMD source directory
+
+Unpack NAMD and matching Charm++ source code:
+  tar xzf NAMD_2.10_Source.tar.gz
+  cd NAMD_2.10_Source
+  tar xf charm-6.7.0-pre.tar
+  
+  MAKE SURE YOU PUT MY SOURCE CODE FILES INTO THE SRC/ DIRECTORY
+
+Build and test the Charm++/Converse library (shared memory, netlrts version):
+  cd charm-6.7.0-pre
+  ./build charm++ netlrts-linux-x86_64 --with-production
+  cd netlrts-linux-x86_64/tests/charm++/megatest/
+  make pgm
+  ./charmrun +p4 ./pgm   (multicore does not support multiple nodes)
+  cd ../../../../..
+
+Download and install TCL and FFTW libraries:
+  (cd to NAMD_2.10_Source if you're not already there)
+  wget http://www.ks.uiuc.edu/Research/namd/libraries/fftw-linux-x86_64.tar.gz
+  tar xzf fftw-linux-x86_64.tar.gz
+  mv linux-x86_64 fftw
+  wget http://www.ks.uiuc.edu/Research/namd/libraries/tcl8.5.9-linux-x86_64.tar.gz
+  wget http://www.ks.uiuc.edu/Research/namd/libraries/tcl8.5.9-linux-x86_64-threaded.tar.gz
+  tar xzf tcl8.5.9-linux-x86_64.tar.gz
+  tar xzf tcl8.5.9-linux-x86_64-threaded.tar.gz
+  mv tcl8.5.9-linux-x86_64 tcl
+  mv tcl8.5.9-linux-x86_64-threaded tcl-threaded
+
+Optionally edit various configuration files:
+  (not needed if charm-6.7.0-pre, fftw, and tcl are in NAMD_2.10_Source)
+  vi Make.charm  (set CHARMBASE to full path to charm)
+  vi arch/Linux-x86_64.fftw     (fix library name and path to files)
+  vi arch/Linux-x86_64.tcl      (fix library version and path to TCL files)
+
+Set up build directory and compile:
+  ./config Linux-x86_64-g++ --charm-arch netlrts-linux-x86_64
+  cd Linux-x86_64-g++
+  make   (or gmake -j4, which should run faster)
+
+Optional: Quick tests using one and two processes (network version):
+  (this is a 66-atom simulation so don't expect any speedup)
+  ./namd2
+  ./namd2 src/alanin
+  ./charmrun ++local +p2 ./namd2
+  ./charmrun ++local +p2 ./namd2 src/alanin
+  (for MPI version, run namd2 binary as any other MPI executable)
+
+Optional: Longer test using four processes:
+  wget http://www.ks.uiuc.edu/Research/namd/utilities/apoa1.tar.gz
+  tar xzf apoa1.tar.gz
+  ./charmrun ++local +p4 ./namd2 apoa1/apoa1.namd
+  (FFT optimization will take a several seconds during the first run.)
+
+
+Make sure you include: 
+replicaUniformPatchGrids on
+in the NAMD input file script
+
+Use the following command to run:
+/path/to/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/charmrun ++local +p8 /path/to/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/namd2 +replicas 4 fwd_rev1.namd +stdout fwd_rev1.out.%d
+
+Modify the '+p' argument to be the number of processors used for the simulation. And '+replicas' tells NAMD how many replicas to run.
+
+which on my computer is:
+/home/lvotapka/Downloads/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/charmrun +p8 ++local /home/lvotapka/Downloads/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/namd2 +replicas 4 fwd_rev1.namd +stdout fwd_rev1.out.%d
+

@@ -1,0 +1,500 @@
+##########################################
+   ###   ######  ######  ### ###  #####
+  #####   ##  #   ##  #   ##  #    ##  #
+  ##      ##      ##      ## #     ##  #
+   ##     ####    ####    ###      ##  #
+    ##    ##      ##      ###     #####
+  #####   ##  #   ##  #   ## #     ##  #
+   ###   ######  ######  ###  ##  ###  #
+##########################################
+         #######   #  #      ###
+       ##       #########       ##
+         ###      #  #   #######
+
+Manual for Simulation-Enabled Estimation of Kinetic Rates (SEEKR)
+
+
+
+Table of Contents:
+ I. Introduction
+ II. Installation
+ III. SEEKR Program Structure
+ IV. The SEEKR Input File
+ V. Usage
+ VI. Compiling NAMD
+ VII. Troubleshooting
+ VIII. Tips
+
+I. Introduction
+---------------
+SEEKR (http://amarolab.ucsd.edu/seekr/) is a suite of open-source scripts and tools designed to enable researchers to perform multiscale computation of the kinetics of molecular binding, unbinding, and transport using a combination of molecular dynamics, Brownian dynamics, and milestoning theory.
+
+Important note: SEEKR must not, I repeat, MUST NOT be used in a black-box fashion. It is a complicated interaction of scripts that interface with multiple simulation engines, python libraries, and cluster batch submission software. Therefore, you must understand and have mastery over the requisite software before using SEEKR, then understand milestoning theory and what SEEKR is doing at each stage of its calculation. If you don't, you'll likely cause yourself much pain and suffering in the form of endless cryptic errors, faulty results, and wasted supercomputer time. I'm sorry that SEEKR is not more user-friendly, but the high complexity of the method makes that problem rather unavoidable. Nevertheless, we've devoted considerable time to making the code correct, adding automation where possible, and thinking up unit tests. I apologize for the convoluted and the seemingly senseless jumblings of commands used in the input files, but each one does serve a purpose.
+PLEASE do yourself a favor and proceed with caution.
+
+Another important note: It is VERY IMPORTANT in cases when you will be using SEEKR for real research, that you verify the validity of the NAMD and BrownDye input files with an expert in molecular dynamics (MD) and Brownian dynamics (BD). You don't want to have to redo your entire calculations if you realize afterwards that you accidentally used the wrong barostat, or the wrong Debye length, or any one of another thousand parameters!
+
+Please visit http://amarolab.ucsd.edu/seekr/ for tutorials and additional details, and the Github repository http://github.com/lvotapka/seekr for downloads, discussion, and other helpful information.
+
+
+II. Installation
+----------------
+
+SEEKR is designed to run on Linux and requires the installation of the following software to function properly:
+
+ - NAMD
+ - BrownDye
+ - LEaP (when using the Amber forcefield)
+ - APBS
+ - PBS (when on a supercomputer that uses PBS)
+ - SLURM (when on a supercomputer that uses SLURM)
+
+In addition to the following nonstandard Python libraries:
+ - MDAnalysis
+ - numpy
+ - scipy
+
+All these programs/libraries must be installed and functional before using SEEKR. Please consult the manuals for these programs/libraries for installation and usage instructions.
+
+
+III. SEEKR Program Structure
+---------------------------
+
+The SEEKR suite is composed of three front-end scrips, and several back-end scripts, and a few auxiliary scripts. A typical user is likely to use only the three front-end ones, but may need to interact with the back-end ones to make their calculation work, or perhaps a user will find the back-end script useful for other purposes. The auxiliary scripts may be useful for additional or nonstandard calculations.
+
+The three front-end scripts are:
+ * seekr.py - The program that is called to prepare MD/BD for a ligand-receptor system. The first argument defines the input file. If the second argument is '-r' or '--remove', it will rewrite an entire SEEKR filetree: similar to the 'empty_rootdir' option for the input file defined below. If seekr.py is run without arguments, the unit tests will be performed.
+ * control.py - The program that is designed to make the numerous and parallelized MD phases to be easier to submit, manage, prepare, and control on a supercomputer or cluster.
+ * analyze.py - This program condenses the various and scattered data and results from the SEEKR simulations into thermodynamic information, kinetic information, rate constants, and error estimates.
+
+The back-end scripts and programs are (a typical user is not likely to interact with these):
+ * adv_template.py - Implements a file templating system similar to Django's, where one can embed variables and commands into template strings and files.
+ * apbs.py - Generates APBS input files and runs electrostatic calculations in an automated fashion for BD simulations.
+ * bd.py - Prepares BrownDye simulations.
+ * colvars.py - Creates the necessary files to use the colvars module in NAMD. Colvars are used in the ensemble equilibration phase of the SEEKR calculation.
+ * filetree.py - Creates the directories that will be populated with files used in the SEEKR calculations. Contains classes and functions that can be used to create an entire filetree based on nested python dictionaries.
+ * fix_pdb.py - Fixes a VMD output PDB file to have consecutive atom numbers number and correctly formatted TER cards
+ * md.py - Prepares NAMD simulations. It references and controls colvars.py, psfmerge.py, and namd_inputs.py
+ * milestones.py - Defines the milestone object, used by the milestone XML file and used in the generation of starting conformations for the simulations.
+ * namd_inputs.py - An extension of the adv_template.py script above to automatically generate NAMD input files.
+ * pdb2.py - A module that handles the parsing and writing of PDB, PQR, and PQRXML files.
+ * positions_orient.py - Generates the positions and orientations of the molecules for each milestone and writes the corresponding structures.
+ * psfmerge.py - Can combine the PSF files from two separate molecules into a single PSF file for simulations using CHARMM.
+ * transformations.py - A module obtained from Christopher Gohlke that contains a multitude of useful linear algebra and quaternion functions relating to rotations.
+
+Template and other miscellaneous files:
+ * apbs_input.template - A template file when APBS input files are generated.
+ * colvar_plane.template - A template file for constraining the ensemble equilibrium phase to a planar milestone
+ * colvar_sphere.template - A template file for constraining the ensemble equilibrium phase to a spherical milestone
+ * empty.pqrxml - An empty pqrxml file used to generate the trajectory at the end of BD calculation that only includes one of the molecules.
+ * namd_input.template - A template file for when NAMD input files are generated.
+ * TEMPLATE.seekr - A template file that can be used to generate additional SEEKR input files.
+
+Auxiliary programs:
+
+ None included so far.
+
+
+IV. The SEEKR Input File
+------------------------
+
+The SEEKR program can utilize over 100 arguments. Some of these must be supplied by the user, and others have default values. Below is a list of each of the arguments as well as instructions for how to construct the input file. (In practice, you probably ought to just modify one of the existing .seekr files that have been provided, for instance: seekr/doc/tutorial/TEMPLATE.seekr) These options are all case insensitive. They also may be entered in any order.
+
+#### project details ####
+project_name - required string - The name of your project/molecular system. Many files will include this value it its name. Be sure that this is unique to each instance of SEEKR you are running.
+root_dir - required directory - an absolute path to the location where the SEEKR filetree will be constructed. The path must include the name of the system and a directory will be created.
+test_mode - optional boolean: default False - whether the program is being run in test mode
+md - optional boolean: default True - whether SEEKR will run any MD calculations
+bd - optional boolean: default True - whether SEEKR will run any BD calculations
+k_off - optional boolean: default False - If set to True, then SEEKR sets up the models to compute a k-off. If set to False, then a normal k-on calcultion is performed.
+empty_rootdir - optional boolean: default False - If set to True, then the entire root directory of the molecular system will be deleted (if it already exists) upon running SEEKR. Otherwise, only some of the files will be overwritten. Setting this to True can be useful if you want to delete all files in your filetree or force LEAP to recompute the parameter/topology files. It is the same as running SEEKR with the 'remove' argument.
+tclforcesscript - required file path - a relative or absolute path providing the location of the milestoning.tcl file that was included in the SEEKR installation.
+quatforcesscript - optional file path - a relative or absolute path providing the location of the quat_forces.tcl file that was included int the SEEKR installation. Only required if running rotational milestoning.
+master_temperature - required number - The temperature that will be used throughout all simulations and all calculation stages.
+ens_equil_len - required integer - the number of timesteps to run in the ensemble equilibration stage
+number_of_ens_equil_frames - required integer - the number of frames to pull from the ensemble equilibration trajectories. Must be an integer denominator of parameter "ens_equil_len"
+number_of_ens_equil_frames_skipped - required integer - the number of frames extracted from the ensemble equilibration trajectory that are skipped for the reversal stage. Must be an integer smaller than parameter "number_of_ens_equil_frames_skipped".
+extract_stride - optional integer: default 1 - the stride of the written trajectory to write the equilibrium distribution for reversal stage
+
+#### ligand/receptor information ####
+lig_pdb_filename - required file path - a PDB file path that contains the ligand molecule
+lig_pqr_filename - optional file path - a PQR file path that contains the ligand molecule. Required if BD is being run.
+rec_pdb_filename - required file path - a PDB file path that contains the receptor molecule including waters and salt ions.
+rec_xsc_filename - optional string - A starting .xsc file for the SEEKR system.
+cell_shape - optional string: default 'box' - Options are 'box' if the system is a waterbox, or 'oct' if the system is a truncated octahedron. This parameter is not necessary if 'rec_xsc_filename' is defined. Using 'rec_xsc_filename' is recommended whenever possible instead of this option. If you do use 'cell_shape', then it is recommended to run the ens_equil stage using the 'npt' ensemble.
+rec_dry_pdb_filename - required file path - a PDB file path that contains the receptor molecule, NOT including any waters or solvent ions.
+rec_dry_pqr_filename - optional file path - a PQR file path that contains the receptor molecule, NOT including any waters or solvent ions. Required if BD is being run.
+rec_psf_filename - optional file path - a PSF file path of the receptor molecule, and possibly including the ligand too (if "ignore_psf" is set to True). Required if running MD using the CHARMM forcefield.
+lig_psf_filename - optional file path - a PSF file path of the ligand molecule. Only required if running MD using the CHARMM and if "ignore_psf" parameter set to False.
+ignore_psf - optional boolean: default False - if set to True, then "rec_psf_filename" must include both the ligand and receptor as well as all solvent molecules. Otherwise, if set to False, then "rec_psf_filename" must only contain the receptor and solvent molecules, while "lig_psf_filename" must be provided.
+rec_rot - optional boolean: default True - Whether the milestones rotate with the receptor molecule. This is irrelevant for spherical milestones.
+lig_rot - optional boolean: default False - Whether ligand rotation transitions are counted. If False, only tranlational transitions will be counted. NOTE: not yet implemented.
+
+#### NAMD TCL script parameters ####
+script_interval - optional integer: default 5 - The number of MD timesteps skipped between evaluations of the milestoning script in NAMD.
+abort_on_crossing - optional boolean: default False - whether a forward-stage run is stopped immediately upon making a transition. Otherwise, the calculation is continued to monitor for additional transitions.
+ligrange - required range of integers, or keyword 'auto' - the atom indeces that define the ligand in the combined ligand-receptor system. If the keyword 'auto' is used, a ligand range will be automatically found, though the result should be verified that it's what the user desires.
+lig_com_indeces - required range of integers, or keyword 'auto' - the atom indeces that are used to monitor the center of mass of the ligand. If the keyword 'auto' is used, a ligand range will be automatically found, though the result should be verified that it's what the user desires.
+recrange - required range of integers, or keyword 'auto' - the atom indeces of the receptor. This can be a simpler subset of atoms to save time, like the alpha carbons. If the keyword 'auto' is used, a receptor range will be automatically found, though the result should be verified that it's what the user desires.
+rec_com_indeces - required range of integers, or keyword 'auto_all' or 'auto_ca' - the atom indeces that are used to monitor the center of mass of the receptor. This can be a simpler subset of atoms to save time, like the alpha carbons. If the keyword 'auto_all' is used, a receptor range of all receptor atoms will be automatically found. If the keyword 'auto_ca' is used, a receptor list of indeces of all alpha carbons only will be automatically found. Though either result should be verified that it's what the user desires.
+
+#### Active sites containing milestones ####
+Any parameter that starts with the string "site#" where # is a number, is classified as a site where milestones are defined, and where MD will be performed. After "site#", a set of square brackets contain a series of parameters, separated by commas, about the milestones in the site. They are purposely formatted like a Python list. Following is a description of these parameters. All units of distance in Angstroms.
+
+anchor_function - required string - The type of milestone included in this site. Options include:
+  - planes: the milestones will be a series of parallel planes
+  - planes_with_rotations: the milestones will be a series of planes with rotational milestones (NOTE: not yet implemented and tested)
+  - concentric_spheres: The milestones will be a series of concentric spheres centered on an absolute cartesian coordinate.
+  - concentric_spheres_atom: the milestones will be a series of concentric spheres centered on the center of mass of one or more atoms in the receptor.
+  - concentric_spheres_atom_with_rotations: the milestones will be a series of concentric spheres centered on the center of mass of one or more atoms in the receptor. Rotational milestones will be included (NOTE: not yet implemented and tested).
+r - number for "concentric_spheres", "concentric_spheres_atom", and "concentric_spheres_atom_with_rotations". This is the radius of the outermost spherical milestone.
+r_low - number for "concentric_spheres", "concentric_spheres_atom", and "concentric_spheres_atom_with_rotations". This is the radius of the innermost spherical milestone.
+x,y, and z - numbers for "concentric_spheres", "concentric_spheres_atom", and "concentric_spheres_atom_with_rotations". These are the cartesian components for the center of the spherical milestones in this site.
+atomid - integers for "concentric_spheres_atom", and "concentric_spheres_atom_with_rotations". The atom indeces whose center of mass that the spherical milestones are centered on.
+vx, vy, and vz - numbers for "concentric_spheres", "concentric_spheres_atom", and "concentric_spheres_atom_with_rotations". These are the cartesian components a vector along which the ligand will be placed on the spherical milestones.
+startvx, startvy, and startvz - numbers for "concentric_spheres", "concentric_spheres_atom", and "concentric_spheres_atom_with_rotations". These are the cartesian components a vector, the end of which marks the start of the vx, vy, vz vector.
+origx, origy, and origz - numbers for "planes" and "planes_with_rotations". This is the origin, or center, of the set of planar milestones.
+normx, normy, and normz - numbers for "planes" and "planes_with_rotations". This is the vector that is the normal to all the planar milestones.
+lowest - number for "planes" and "planes_with_rotations". This is the distance of the first planar milestone from the origx,origy,origz vector.
+highest - number for "planes" and "planes_with_rotations". This is the distance of the last planar milestone from the origx,origy,origz vector.
+increment: number for all anchor_functions. This is the increment of distance between adjacent milestones.
+
+#### ligand positions/orientations ####
+hedron - optional string - The type of rotational milestone included in this calculation. Options include
+  - single: (default) Essentially equivalent to no rotational milestones. This is the only option implemented so far
+  - other options will be made available in the future...
+reject_clashes - optional boolean: default False - Whether to reject a milestone based merely on whether the ligand and receptor structures clash if the ligand is placed on that milestone.
+
+#### MD parameters ####
+ff - required string - Which forcefield to use for MD portion of simulations. May be either 'amber' or 'charmm'.
+
+### LEAP ###
+sample_leap_file - optional file path - If the 'ff' parameter is set to 'amber', you must provide information to help SEEKR construct the series of LEAP files for MD calculations. This file must contain the commands 'loadpdb' and 'saveamberparam' at the very least, and should load all source files and libraries needed for both the receptor and the ligand
+leap_preload_commands - optional list of strings - If you do not want or cannot provide a sample LEAP file, then place all pre 'loadpdb' commands in a python list format after this command. Lists are enclosed in square braces: "[", and "]", and comma-separated. Do not include quotes.
+leap_postload_commands - optional list strings - Similar to 'leap_preload_commands' above, this is a list of commands to run after 'loadpdb'. See guidelines for that command above or a sample ".seekr" file for how to format the list.
+leap_program - optional file path - The path or command for running the LEAP program, 'sleap' or 'tleap' are recommended.
+
+### MINIMIZATIONS STAGE ###
+min - required boolean - Whether the MD portion of calculations will run a minimization at each of the milestones.
+min_constrained - optional list of strings: default [] - A list of which portions of the simulation will be constrained (unable to move at all). Options include 'ligand', the atoms of which are taken from the 'ligrange' parameter above, and 'receptor', the atoms of which are taken from 'recrange' above. Lists are enclosed in square braces: "[", and "]", and comma-separated. Be sure to include quotes.
+min_restrained - optional list of strings: default [] - A list of which portions of the simulation will be restrained (restained by an artificial spring force). Options include 'ligand', the atoms of which are taken from the 'ligrange' parameter above, and 'receptor', the atoms of which are taken from 'recrange' above. Lists are enclosed in square braces: "[", and "]", and comma-separated. Be sure to include quotes.
+min_restrained_force - optional number: default 10.0 - Restraining spring force (in kcal/s*angstrom*angstrom).
+min_num_steps - optional integer - Number of minization timesteps to run.
+min_out_freq - optional integer - Number of timesteps between writing to standard output.
+min_ensemble - optional string - Which ensemble to use for the minimizations. Options include: 'nve', 'nvt', or 'npt'.
+
+### TEMPERATURE EQUILIBRATIONS STAGE ###
+temp_equil - required boolean - Whether the MD portion of calculations will run a temperature equilibration at each of the milestones.
+temp_equil_constrained - optional list of strings - A list of which portions of the simulation will be constrained. Options include 'ligand', the atoms of which are taken from the 'ligrange' parameter above, and 'receptor', the atoms of which are taken from 'recrange' above. Lists are enclosed in square braces: "[", and "]", and comma-separated. Be sure to include quotes.
+temp_equil_restrained - optional list of strings: default [] - A list of which portions of the simulation will be restrained (restained by an artificial spring force). Options include 'ligand', the atoms of which are taken from the 'ligrange' parameter above, and 'receptor', the atoms of which are taken from 'recrange' above. Lists are enclosed in square braces: "[", and "]", and comma-separated. Be sure to include quotes.
+temp_equil_restrained_force - optional number: default 10.0 - Restraining spring force (in kcal/mol*angstrom*angstrom).
+temp_equil_peak_temp - optional number - During the temperature equilibration, several simulations of increasing, and then decreasing temperature will be run up to this parameter in increments of the parameter: 'temp_equil_temp_increment'.
+temp_equil_temp_increment - optional number - The interval that each temperature equilibration simulation is increased.
+temp_equil_num_steps - optional integer - Number of temperature equilibration timesteps to run in each of the simulations.
+temp_equil_ensemble - optional string - Which ensemble to use for the temperature equilibrations. Options include: 'nve', 'nvt', or 'npt'.
+
+### ENSEMBLE EQUILIBRATIONS STAGE (or umbrella sampling stage) ###
+ens_equil - required boolean
+ens_equil_colvars - optional boolean - whether collective variables (colvars) should be imposed between the ligand and the receptor molecules.
+ens_equil_colvar_sel - optional list of strings - A list of which portions of the simulation will be involved in the collective variables. Options include 'ligand', the atoms of which are taken from the 'ligrange' parameter above, and 'receptor', the atoms of which are taken from 'recrange' above. Lists are enclosed in square braces: "[", and "]", and comma-separated. Be sure to include quotes.
+ens_equil_colvar_force - optional number - The spring constant of the collective variable (in kcal/mol*angstrom*angstrom).
+ens_equil_colvarstrajfrequency - optional integer - The number of timesteps between writing colvar information frames.
+ens_equil_colvarsrestartfrequency - optional integer - The number of timesteps between writing colvar restart frames.
+ens_equil_colvar_ligand_indeces - optional range of integers - Should be the same entry as "ligrange" above, but can be a different range of atom indexes.
+ens_equil_colvar_receptor_indeces - optional range of integers - Should be the same entry as "recrange" above, but can be a different range of atom indexes.
+ens_equil_constrained - optional list of strings - Molecules may also be constrained in this phase. A list of which portions of the simulation will be constrained. Options include 'ligand', the atoms of which are taken from the 'ligrange' parameter above, and 'receptor', the atoms of which are taken from 'recrange' above. Lists are enclosed in square braces: "[", and "]", and comma-separated. Be sure to include quotes.
+ens_equil_restrained - optional list of strings: default [] - Molecules may also be constrained in this phase. A list of which portions of the simulation will be restrained (restained by an artificial spring force). Options include 'ligand', the atoms of which are taken from the 'ligrange' parameter above, and 'receptor', the atoms of which are taken from 'recrange' above. Lists are enclosed in square braces: "[", and "]", and comma-separated. Be sure to include quotes.
+ens_equil_restrained_force - optional number: default 10.0 - Restraining spring force (in kcal/mol*angstrom*angstrom).
+ens_equil_ensemble - optional string - Which ensemble to use for the ensemble equilibrations. Options include: 'nve', 'nvt', or 'npt'.
+
+### FWD REV STAGE ###
+fwd_rev_constrained - optional list of strings - Molecules may also be constrained in this phase. A list of which portions of the simulation will be constrained. Options include 'ligand', the atoms of which are taken from the 'ligrange' parameter above, and 'receptor', the atoms of which are taken from 'recrange' above. Lists are enclosed in square braces: "[", and "]", and comma-separated. Be sure to include quotes.
+fwd_rev_ensemble - optional string - Which ensemble to use for the fwd-rev stage. Options include: 'nve', 'nvt', or 'npt'.
+fwd_rev_type - required string - Options include 'protein' and 'membrane'. This option helps with how the simulations are prepared.
+fwd_rev_dcdfreq - required integer - The number of steps between writes to the DCD trajectory file.
+fwd_rev_restart_freq - required integer - The number of steps between writes of the restart files.
+fwd_rev_run_freq - required integer - The number of steps between evaluations of crossing events when running additional simulations. If this number is too low, then the simulations will be inefficient, but if they're too high, then too many steps will elapse after a crossing event, which will also be inefficient.
+fwd_rev_max_num_steps - optional integer - the maximum number of steps before giving up and starting the next simulation. Default: 0 (which means no maximum).
+fwd_rev_launches_per_config - optional integer - Number of times to run from a single position configuration with a reinitialized velocity. Default: 1.
+
+#### BD Parameters ####
+# all of these parameters required only if 'bd' above parameter set to True
+browndye_bin_dir - optional file path - The directory where all the Browndye executables are located. If left blank, then the BrownDye executables should be in a directory that is on your system's PATH.
+bd_threads - required integer - The number of shared memory threads that Browndye will use for BD trajectory calculations. Equivalent to the "n-threads" option in Browndye.
+bd_prods_per_anchor - required integer - The number of trajectories to run per BD anchor. Equivalent to the "n-trajectories" option in Browndye
+bd_rec_pqr_filename - required file path - The name of the PQR file to use for the BD simulations.
+
+### APBS Parameters ###
+# all of these parameters required only if 'bd' above parameter set to True
+apbs_executable optional path: default apbs - The path to the APBS program
+
+Any parameter that starts with the string "ion#" where # is a number, is assumed to be an ion to add to the APBS calculation that will be used in the BD stage. After "ion#", a set of square brackets contain a series of parameters, separated by commas, about the ions. They are purposely formatted like a Python list. Following is a description of these parameters. All units of distance are in Angstroms.
+name - an identifying name for this ion
+concentration - the concentration of this ion
+charge - the valence charge on the ion
+radius - the radius of this ion
+
+ion1rad - DEPRECATED optional number: default 1.67 - The radius of the negative ion in the APBS calculation (assuming valence of -1). See APBS documentation for additional info.
+ion2rad - DEPRECATED optional number: default 1.16 - The radius of the positive ion in the APBS calculation (assuming valence of +1). See APBS documentation for additional info.
+ion1conc - DEPRECATED optional number: default 0.0 - The concentration of the negative ion in the APBS calculation. See APBS documentation for additional info.
+ion2conc - DEPRECATED optional number: default 0.0 - The concentration of the positive ion in the APBS calculation. See APBS documentation for additional info.
+lpbe_npbe - optional string: default 'lpbe' - If set to 'lpbe', APBS will perform the linear Poisson-Boltzmann calculation. If set to 'npbe', APBS will perform the nonlinear PB calculation. See APBS documentation for additional info.
+inputgen_executable - optional path: default inputgen.py - The path to the inputgen.py script that comes with APBS.
+inputgen_fadd - optional number: default 100 - The length (in Angstroms) to add to each dimension of the molecule when computing the DX electrostatic grid. See 'inputgen' program documentation for additional info.
+inputgen_gmemceil - optional number: default 64000 - the amount of memory (in KB) to use when computing the size of a DX file. See 'inputgen' program documentation for additional info.
+inputgen_resolution - optional number: default: 0.5 - The resolution, (in Angstroms) of the DX electrostatic grid. 0.5 is recommended but can be increased to 1.0 for very large structures if you're having memory difficulties. See 'inputgen' program documentation for additional info.
+inputgen_cfac - optional number: default 4.0 - The amount to multiply the molecular dimension to compute the coarse grid in the APBS calculation. See APBS and 'inputgen' program documentation for additional info.
+
+
+V. Usage
+--------
+
+This section contains a description of how one would prepare, run, and analyze a SEEKR calculation.
+
+The three front-end all may be run with the '-h' option to see all available options.
+
+See the tutorials for a detailed example of how to prepare the apo stage of the SEEKR calculation.
+
+Example usage commands:
+python seekr.py YOUR_INPUT.seekr
+python control.py COMMAND ANCHOR STAGE
+python analyze.py -m milestones.xml -b 0 --skip 100 --number 1000
+
+See the tutorials for detailed examples of all stages of the SEEKR calculation
+
+VI. Compiling NAMD
+------------------
+
+A special version of NAMD will need to be compiled on your local machine or on a supercomputer like Stampede in order to run SEEKR.
+
+Instructions for compiling locally:
+
+How to build the proper NAMD build for SEEKR
+
+1. Download the NAMD source code. I'm using NAMD2.10 from the nightly build on Nov 2, 2015.
+
+http://www.ks.uiuc.edu/Development/Download/download.cgi?PackageName=NAMD
+
+2. Compile Charm++ and NAMD
+
+The following steps were modified from the notes.txt file in the NAMD source directory
+
+Unpack NAMD and matching Charm++ source code:
+  tar xzf NAMD_2.10_Source.tar.gz
+  cd NAMD_2.10_Source
+  tar xf charm-6.7.0-pre.tar
+  
+  MAKE SURE YOU PUT MY SOURCE CODE FILES INTO THE SRC/ DIRECTORY
+
+Build and test the Charm++/Converse library (shared memory, netlrts version):
+  cd charm-6.7.0-pre
+  ./build charm++ netlrts-linux-x86_64 --with-production
+  cd netlrts-linux-x86_64/tests/charm++/megatest/
+  make pgm
+  ./charmrun +p4 ./pgm   (multicore does not support multiple nodes)
+  cd ../../../../..
+
+Download and install TCL and FFTW libraries:
+  (cd to NAMD_2.10_Source if you're not already there)
+  wget http://www.ks.uiuc.edu/Research/namd/libraries/fftw-linux-x86_64.tar.gz
+  tar xzf fftw-linux-x86_64.tar.gz
+  mv linux-x86_64 fftw
+  wget http://www.ks.uiuc.edu/Research/namd/libraries/tcl8.5.9-linux-x86_64.tar.gz
+  wget http://www.ks.uiuc.edu/Research/namd/libraries/tcl8.5.9-linux-x86_64-threaded.tar.gz
+  tar xzf tcl8.5.9-linux-x86_64.tar.gz
+  tar xzf tcl8.5.9-linux-x86_64-threaded.tar.gz
+  mv tcl8.5.9-linux-x86_64 tcl
+  mv tcl8.5.9-linux-x86_64-threaded tcl-threaded
+
+Optionally edit various configuration files:
+  (not needed if charm-6.7.0-pre, fftw, and tcl are in NAMD_2.10_Source)
+  vi Make.charm  (set CHARMBASE to full path to charm)
+  vi arch/Linux-x86_64.fftw     (fix library name and path to files)
+  vi arch/Linux-x86_64.tcl      (fix library version and path to TCL files)
+
+Set up build directory and compile:
+  ./config Linux-x86_64-g++ --charm-arch netlrts-linux-x86_64
+  cd Linux-x86_64-g++
+  make   (or gmake -j4, which should run faster)
+
+Optional: Quick tests using one and two processes (network version):
+  (this is a 66-atom simulation so don't expect any speedup)
+  ./namd2
+  ./namd2 src/alanin
+  ./charmrun ++local +p2 ./namd2
+  ./charmrun ++local +p2 ./namd2 src/alanin
+  (for MPI version, run namd2 binary as any other MPI executable)
+
+Optional: Longer test using four processes:
+  wget http://www.ks.uiuc.edu/Research/namd/utilities/apoa1.tar.gz
+  tar xzf apoa1.tar.gz
+  ./charmrun ++local +p4 ./namd2 apoa1/apoa1.namd
+  (FFT optimization will take a several seconds during the first run.)
+
+
+Make sure you include: 
+replicaUniformPatchGrids on
+in the NAMD input file script
+
+Use the following command to run:
+/path/to/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/charmrun ++local +p8 /path/to/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/namd2 +replicas 4 fwd_rev1.namd +stdout fwd_rev1.out.%d
+
+Modify the '+p' argument to be the number of processors used for the simulation. And '+replicas' tells NAMD how many replicas to run.
+
+which on my computer is:
+/home/lvotapka/Downloads/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/charmrun +p8 ++local /home/lvotapka/Downloads/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/namd2 +replicas 4 fwd_rev1.namd +stdout fwd_rev1.out.%d
+
+
+Instructions for compiling on Stampede:
+
+How to build the proper NAMD build for SEEKR on the Stampede supercomputer
+
+NOTE: If you are trying to build NAMD locally, you probably only need to follow the normal compile instructions for NAMD in notes.txt, but be sure to include the modified code in the src/ directory.
+
+1. Download the NAMD source code. I'm using NAMD2.10 from the nightly build on Nov 2, 2015.
+
+http://www.ks.uiuc.edu/Development/Download/download.cgi?PackageName=NAMD
+
+2. Compile Charm++ and NAMD
+
+The following steps were modified from the notes.txt file in the NAMD source directory
+
+Unpack NAMD and matching Charm++ source code:
+  tar xzf NAMD_2.10_Source.tar.gz
+  cd NAMD_2.10_Source
+  tar xf charm-6.7.0-pre.tar
+  
+  MAKE SURE YOU PUT MY SOURCE CODE FILES INTO THE SRC/ DIRECTORY
+
+GOT this script from JIM
+
+replace my work directory with your work directory:
+
+uname -a
+module load fftw3
+echo $PATH
+cat STDERR_REDIRECT_WORKING > /dev/null
+echo /work/00288/tg455591/charm-6.7.0-build-2015-Nov-08-17541-verbs-linux-x86_64-iccstatic
+mkdir /work/00288/tg455591/charm-6.7.0-build-2015-Nov-08-17541-verbs-linux-x86_64-iccstatic
+cd /work/00288/tg455591/charm-6.7.0-build-2015-Nov-08-17541-verbs-linux-x86_64-iccstatic
+wget --no-verbose http://www.ks.uiuc.edu/~jim/build/charm-6.7.0.tar
+tar xmf /work/00288/tg455591/charm-6.7.0-build-2015-Nov-08-17541-verbs-linux-x86_64-iccstatic/charm-6.7.0.tar
+/bin/rm -f /work/00288/tg455591/charm-6.7.0-build-2015-Nov-08-17541-verbs-linux-x86_64-iccstatic/charm-6.7.0.tar
+cd /work/00288/tg455591/charm-6.7.0-build-2015-Nov-08-17541-verbs-linux-x86_64-iccstatic/charm-6.7.0
+touch src/util/pup_f.f90
+
+./build charm++ verbs-linux-x86_64 iccstatic --no-build-shared --with-production 
+cd verbs-linux-x86_64-iccstatic/tests/charm++/megatest
+make pgm
+ldd pgm
+mv pgm ../../../bin/megatest
+cd ../../converse/megacon
+make pgm
+ldd pgm
+mv pgm ../../../bin/megacon
+cd ../../..
+/bin/rm -rf ~/charm-6.7.0/verbs-linux-x86_64-iccstatic
+mkdir ~/charm-6.7.0
+chmod a+rX ~/charm-6.7.0
+mkdir ~/charm-6.7.0/verbs-linux-x86_64-iccstatic
+cp -rL bin include ~/charm-6.7.0/verbs-linux-x86_64-iccstatic
+cd lib
+mkdir ~/charm-6.7.0/verbs-linux-x86_64-iccstatic/lib
+mv lib*modulemsa.a lib*moduleNeighborLB.a lib*moduleHybridLB.a lib*moduleRefineLB.a lib*moduleGreedyLB.a lib*moduleCkMulticast.a lib*moduleCkIO.a lib*moduleCkLoop.a lib*ck.a lib*ckmain.a lib*conv-cplus-y.a lib*conv-core.a lib*conv-util.a lib*conv-partition.a lib*conv-ldb.a cray_tlbh*.* libmemory-default.* libmemory-os.* libthreads-default.* lib*ckqt.a lib*trace-projections.a lib*trace-summary.a libldb-rand.* ~/charm-6.7.0/verbs-linux-x86_64-iccstatic/lib
+mkdir ~/charm-6.7.0/verbs-linux-x86_64-iccstatic/lib_so
+cd; /bin/rm -rf /work/00288/tg455591/charm-6.7.0-build-2015-Nov-08-17541-verbs-linux-x86_64-iccstatic
+chmod -R a+rX ~/charm-6.7.0/verbs-linux-x86_64-iccstatic
+ls -l ~/charm-6.7.0/verbs-linux-x86_64-iccstatic/lib
+ls -l ~/charm-6.7.0/verbs-linux-x86_64-iccstatic/bin/charmrun ~/charm-6.7.0/verbs-linux-x86_64-iccstatic/bin/megatest
+cat STDERR_REDIRECT_WORKING > /dev/null
+echo Done building via scp.
+
+
+Now the following information came from the notes.txt file in the NAMD directory. Modified slightly for our purposes.
+
+Download and install TCL and FFTW libraries:
+  (cd to NAMD_2.10_Source if you're not already there)
+  wget http://www.ks.uiuc.edu/Research/namd/libraries/fftw-linux-x86_64.tar.gz
+  tar xzf fftw-linux-x86_64.tar.gz
+  mv linux-x86_64 fftw
+  wget http://www.ks.uiuc.edu/Research/namd/libraries/tcl8.5.9-linux-x86_64.tar.gz
+  wget http://www.ks.uiuc.edu/Research/namd/libraries/tcl8.5.9-linux-x86_64-threaded.tar.gz
+  tar xzf tcl8.5.9-linux-x86_64.tar.gz
+  tar xzf tcl8.5.9-linux-x86_64-threaded.tar.gz
+  mv tcl8.5.9-linux-x86_64 tcl
+  mv tcl8.5.9-linux-x86_64-threaded tcl-threaded
+
+Optionally edit various configuration files:
+  (not needed if charm-6.7.0-pre, fftw, and tcl are in NAMD_2.10_Source)
+  vi Make.charm  (set CHARMBASE to full path to charm) # SET THIS TO THE DIRECTORY: ${HOME}/charm-6.7.0
+  vi arch/Linux-x86_64.fftw     (fix library name and path to files)
+  vi arch/Linux-x86_64.tcl      (fix library version and path to TCL files)
+
+Set up build directory and compile:
+  ./config Linux-x86_64-g++ --charm-arch verbs-linux-x86_64-iccstatic
+  cd Linux-x86_64-g++
+  make   (or gmake -j4, which should run faster)
+
+Optional: Quick tests using one and two processes (network version):
+  (this is a 66-atom simulation so don't expect any speedup)
+  ./namd2
+  ./namd2 src/alanin
+  ./charmrun ++local +p2 ./namd2
+  ./charmrun ++local +p2 ./namd2 src/alanin
+  (for MPI version, run namd2 binary as any other MPI executable)
+
+Optional: Longer test using four processes:
+  wget http://www.ks.uiuc.edu/Research/namd/utilities/apoa1.tar.gz
+  tar xzf apoa1.tar.gz
+  ./charmrun ++local +p4 ./namd2 apoa1/apoa1.namd
+  (FFT optimization will take a several seconds during the first run.)
+
+
+Make sure you include: 
+replicaUniformPatchGrids on
+in the NAMD input file script
+
+Use the following command to run locally:
+/home/lvotapka/Downloads/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/charmrun ++local +p1 /home/lvotapka/Downloads/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/namd2 +replicas 1 --fftwestimate yes fwd_rev1.namd +stdout stdout.%d
+
+Or this one for simple tests:
+/home1/01624/lvotapka/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/charmrun +p16 /home1/01624/lvotapka/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/namd2 +replicas 1 --fftwestimate yes fwd_rev1.namd
+
+
+VII. Troubleshooting
+-------------------
+
+A list of common errors:
+
+Error when running BD stage:
+terminate called after throwing an instance of 'Jam_Exception'
+  what():  outermost grid is too small: needs to be xx.xxx length units bigger
+Solution: increase 'inputgen_fadd' parameter.
+
+Warning when running seekr.py with BD option enabled:
+asc_getToken: Error occurred (bailing out).
+Vio_scanf: Format problem with input.
+Solution: This error arises when APBS is run. The APBS developers have told me to ignore this error, and that it isn't a problem.
+
+
+
+VIII. Tips
+---------
+
+-When using the "sample_leap_file" input option, make sure that the file has "loadpdb" and "saveamberparm" (also optional: "savepdb") lines. Also, make sure that the parameters for ALL molecules are loaded: both receptor and substrate molecules.\
+-Use absolute paths when possible in your input scripts, everything stands a better chance of working as expected.
+
+The directories that begin with "anchor" are designed to be informative. The format looks like: "anchor_A_B_C_D_E_F_G" The numbers correspond to:
+
+A: The index of the milestone (can be positional or rotational)
+B: The index of the positional milestone
+C: The site ID for multiple binding locations on the receptor
+D: The X-coordinate of the anchor (location where the center-of-mass of the ligand was placed)
+E: The Y-coordinate of the anchor (location where the center-of-mass of the ligand was placed)
+F: The Z-coordinate of the anchor (location where the center-of-mass of the ligand was placed)
+G: The index of the rotational milestone. (Until this feature is fully developed, it is likely only to be zero.)
+
+See the SEEKR website for tutorials on how to prepare systems and additional explanations of the program parameters.
+
+Unit Testing:
+It is recommended to write and run unit tests whenever code is being actively developed. Several unit tests have been devised for almost all programs in SEEKR. For most programs, except seekr.py, control.py, and analyze.py, the tests can be run by running them directly from the command line.
