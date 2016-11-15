@@ -1,0 +1,32 @@
+# spherical colvar file
+colvarstrajfrequency         $TEMPLATE_trajfreq
+colvarsrestartfrequency      $TEMPLATE_restartfreq
+
+# returns the distance between two groups
+colvar {
+  name plane
+  outputappliedforce         on
+  distanceZ {
+    axis                    $TEMPLATE_axis
+    main {
+      atomsFile             colvar.pdb       # the ligand atoms
+      atomsCol              O
+      atomsColValue         1
+    }
+    ref {
+      atomsFile              colvar.pdb      #the receptor atoms
+      atomsCol               O
+      atomsColValue          2
+    }
+  }
+}
+
+# given the values provided by the above colvar(s), will apply a force to center the colvars
+harmonic {
+  name umbplane
+  colvars plane
+  forceConstant              $TEMPLATE_force            #force constant kcal/mol-angstrom^2
+  centers                    $TEMPLATE_centers      # equilibrium value at which the restraints are centered
+}
+
+

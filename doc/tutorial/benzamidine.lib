@@ -1,0 +1,142 @@
+!!index array str
+ "BEN"
+!entry.BEN.unit.atoms table  str name  str type  int typex  int resx  int flags  int seq  int elmnt  dbl chg
+ "C1" "ca" 0 1 131072 1 6 -0.261900
+ "C2" "ca" 0 1 131072 2 6 -0.082000
+ "C3" "ca" 0 1 131072 3 6 -0.116000
+ "C4" "ca" 0 1 131072 4 6 -0.058000
+ "C5" "ca" 0 1 131072 5 6 -0.116000
+ "C6" "ca" 0 1 131072 6 6 -0.082000
+ "C" "ce" 0 1 131072 7 6 0.522400
+ "N1" "nh" 0 1 131072 8 7 -0.469100
+ "N2" "nh" 0 1 131072 9 7 -0.453200
+ "H2" "ha" 0 1 131072 10 1 0.149000
+ "H3" "ha" 0 1 131072 11 1 0.170000
+ "H4" "ha" 0 1 131072 12 1 0.170000
+ "H5" "ha" 0 1 131072 13 1 0.170000
+ "H6" "ha" 0 1 131072 14 1 0.149000
+ "H11" "hn" 0 1 131072 15 1 0.326700
+ "H12" "hn" 0 1 131072 16 1 0.326700
+ "HN21" "hn" 0 1 131072 17 1 0.326700
+ "HN22" "hn" 0 1 131072 18 1 0.326700
+!entry.BEN.unit.atomspertinfo table  str pname  str ptype  int ptypex  int pelmnt  dbl pchg
+ "C1" "ca" 0 -1 0.0
+ "C2" "ca" 0 -1 0.0
+ "C3" "ca" 0 -1 0.0
+ "C4" "ca" 0 -1 0.0
+ "C5" "ca" 0 -1 0.0
+ "C6" "ca" 0 -1 0.0
+ "C" "ce" 0 -1 0.0
+ "N1" "nh" 0 -1 0.0
+ "N2" "nh" 0 -1 0.0
+ "H2" "ha" 0 -1 0.0
+ "H3" "ha" 0 -1 0.0
+ "H4" "ha" 0 -1 0.0
+ "H5" "ha" 0 -1 0.0
+ "H6" "ha" 0 -1 0.0
+ "H11" "hn" 0 -1 0.0
+ "H12" "hn" 0 -1 0.0
+ "HN21" "hn" 0 -1 0.0
+ "HN22" "hn" 0 -1 0.0
+!entry.BEN.unit.boundbox array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.BEN.unit.childsequence single int
+ 2
+!entry.BEN.unit.connect array int
+ 0
+ 0
+!entry.BEN.unit.connectivity table  int atom1x  int atom2x  int flags
+ 1 2 4
+ 1 6 4
+ 1 7 1
+ 2 3 4
+ 2 10 1
+ 3 4 4
+ 3 11 1
+ 4 5 4
+ 4 12 1
+ 5 6 4
+ 5 13 1
+ 6 14 1
+ 7 8 2
+ 7 9 1
+ 8 15 1
+ 8 16 1
+ 9 17 1
+ 9 18 1
+!entry.BEN.unit.hierarchy table  str abovetype  int abovex  str belowtype  int belowx
+ "U" 0 "R" 1
+ "R" 1 "A" 1
+ "R" 1 "A" 2
+ "R" 1 "A" 3
+ "R" 1 "A" 4
+ "R" 1 "A" 5
+ "R" 1 "A" 6
+ "R" 1 "A" 7
+ "R" 1 "A" 8
+ "R" 1 "A" 9
+ "R" 1 "A" 10
+ "R" 1 "A" 11
+ "R" 1 "A" 12
+ "R" 1 "A" 13
+ "R" 1 "A" 14
+ "R" 1 "A" 15
+ "R" 1 "A" 16
+ "R" 1 "A" 17
+ "R" 1 "A" 18
+!entry.BEN.unit.name single str
+ "BEN"
+!entry.BEN.unit.positions table  dbl x  dbl y  dbl z
+ 32.567000 19.043000 24.775000
+ 31.400000 18.382000 24.393000
+ 31.452000 17.425000 23.367000
+ 32.676000 17.150000 22.727000
+ 33.844000 17.807000 23.130000
+ 33.804000 18.768000 24.148000
+ 32.526000 20.043000 25.854000
+ 31.362000 20.358000 26.513000
+ 33.636000 20.725000 26.246000
+ 30.463000 18.605000 24.883000
+ 30.556000 16.901000 23.069000
+ 32.713000 16.430000 21.923000
+ 34.783000 17.571000 22.652000
+ 34.701000 19.289000 24.448000
+ 30.500000 19.893000 26.266000
+ 31.368000 21.054000 27.245000
+ 34.523000 20.546000 25.798000
+ 33.573000 21.410000 26.986000
+!entry.BEN.unit.residueconnect table  int c1x  int c2x  int c3x  int c4x  int c5x  int c6x
+ 0 0 0 0 0 0
+!entry.BEN.unit.residues table  str name  int seq  int childseq  int startatomx  str restype  int imagingx
+ "BEN" 1 19 1 "?" 0
+!entry.BEN.unit.residuesPdbSequenceNumber array int
+ 0
+!entry.BEN.unit.solventcap array dbl
+ -1.000000
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+!entry.BEN.unit.velocities table  dbl x  dbl y  dbl z
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
+ 0.0 0.0 0.0
