@@ -42,20 +42,22 @@ If one has a PDB structure with the ligand bound, then finding the binding site 
 Open VMD and load PDB structure 3PTB. Color the protein white and view in a surface representation, then view "resname BEN" in licorice represenation. You should be able to clearly see the benzamidine ligand in the binding site.
 
 
-Now load the structure 'tryp_wet_lastframe.pdb' from the tutorial folder. Hide the waterbox, showing only the protein in a surface representation. Show residues 171, 172, 173, 193, 196, and 203 in a special color to highlight the binding site of trypsin. These will have different residue numbering than in the crystal structure because of the MD simulation done on 'tryp_wet_lastframe.pdb' previously. If desire, you can overlay the apo structure to the holo crystal structure using the MultiSeq tool in the VMD Extensions menu. I chose them because these are residues that appear to be interacting with the ligand, therefore, we can use the center of mass of these residues as the origin of our binding site.
+Now load the structure 'tryp_wet_lastframe.pdb' from the tutorial folder. Hide the waterbox, showing only the protein in a surface representation. Show residues 172 173 174 177 191 193 194 196 202 206 197 in a special color to highlight the binding site of trypsin. These will have different residue numbering than in the crystal structure because of the MD simulation done on 'tryp_wet_lastframe.pdb' previously. If desire, you can overlay the apo structure to the holo crystal structure using the MultiSeq tool in the VMD Extensions menu. I chose them because these are residues that appear to be interacting with the ligand, therefore, we can use the center of mass of these residues as the origin of our binding site.
 
 
 Within the site1 block, set 'anchor_function' to 'concentric_spheres_atom'. This option means that our milestones will be concentric spheres centered around an atom selection.
 set 'r' to '14.0'. This means that the largest spherical milestone will extend with a radius of 14 Angstroms.
 set 'r_low' to '2.0'. This is the radius of the innermost milestone in Angstroms.
 
-In VMD, make the 'tryp_wet_lastframe.pdb' file be the top molecule. In the tkconsole window, type: 'set site [atomselect top "name CA and resid 171 172 173 193 196 203"]'
+ALternatively, you can manually specify
+
+In VMD, make the 'tryp_wet_lastframe.pdb' file be the top molecule. In the tkconsole window, type: 'set site [atomselect top "name CA and resid 172 173 174 177 191 193 194 196 202 206 197"]'
 Then type: 'measure center $site'
-Take note of the resulting coordinates. They should be approximately: "28.992 31.857 27.063"
+Take note of the resulting coordinates. They should be approximately: "-1.536, 13.860, 16.540"
 
-Set 'x' to be '28.992'. Set 'y' to be '31.857'. Set 'z' to be '27.063'.
+Set 'x' to be '.1.536'. Set 'y' to be '13.860'. Set 'z' to be '16.540'.
 
-Now, in the tkconsole window, type: '$site get serial'. The following numbers should be returned: '2475 2487 2498 2756 2798 2909'. Make these numbers the values for the 'atomid' parameter.
+Now, in the tkconsole window, type: '$site get serial'. The following numbers should be returned: '2479 2490 2500 2536 2719 2746 2770 2788 2795 2868 2927'. Make these numbers the values for the 'atomid' parameter.
 
 Now we need to choose where the milestones to place the ligand.
 
@@ -63,13 +65,16 @@ In the Amarolab wiki, on the scripts page, there should be a script called 'modu
 
 Alternatively, in the VMD website, there is a page that contains all the scripts (http://www.ks.uiuc.edu/Research/vmd/script_library/). Download the script called 'eye_line', though some modifications will be needed to make it return the vector from the atom selection to your eye.
 
-In my case, I rescaled my vector to have a length of five Angstroms, and it was '0.942 4.845 -0.900'
+In my case, it was '19.335, 117.924, 79.150'
 
 Set the 'vx', 'vy', 'vz' values to be the values you obtained. Or you can use my values on the line above.
 
 The parameters 'startvx', 'startvy', and 'startvz' allow more control over how the ligand is arranged along the milestones. This vector points from the origin to the location on the first milestone where to start the (vx, vy, vz) vector. If unsure how to modify this, then make 'startvx', 'startvy', and 'startvz' to be the same as 'vx', 'vy', and 'vz'.
 
 Set the 'increment' value to be '2.0'. This is the spacing, in Angstroms, between the milestones.
+
+Alternatively, you can manually specify the placement of milestones using the
+radius list option and provide a string of distances (e.g. 1 2 3 4 6 8 )
 
 We have finished defining the binding site of Trypsin, now we are filling out details of the MD portion of the calculation
 Set 'hedron' to 'single'. This is a future feature concerning rotational milestones.
@@ -80,18 +85,33 @@ Now we need to fill out the LEAP commands. You can do this by hand by entering v
 We will do the former. Write the following into the file:
 
 leap_preload_commands [
-        source leaprc.ff14SB,
+  source leaprc.ff14SB,
         source leaprc.gaff,
+        set default FlexibleWater on,
+        set default PBRadii mbondi2,
         loadoff /path/to/tutorial/Ca2.lib,
         loadoff /path/to/tutorial/benzamidine.lib,
-        loadamberparams /path/to/tutorial/benzamidine.frcmod
-      ]
+        loadamberparams /path/to/tutorial/benzamidine.frcmod,
+        WAT= T4E,
+        HOH= T4E,
+        loadAmberParams frcmod.ionsjc_tip4pew,
+        loadAmberParams frcmod.tip4pew,
+    
+  ]
+
+
 
 Of course change /path/to/tutorial to the true path to the tutorial files...
 
 And write the following also:
       
 leap_postload_commands [
+        bond holo.7.SG holo.137.SG,
+        bond holo.25.SG holo.41.SG,
+        bond holo.109.SG holo.210.SG,
+        bond holo.116.SG holo.183.SG,
+        bond holo.148.SG holo.162.SG,
+        bond holo.173.SG holo.197.SG,
         charge holo,
         check holo,
       ]
@@ -221,6 +241,8 @@ tar -xzf tryp_pre_equil.tgz
 
 The program that we use to control jobs on the supercomputer is called control.py. Make sure that control.py exists in your home directory on Stampede.
 
+Control.py requires you to define the environment variables "NAMD_SEEKR", "CHARM_SEEKR", and "MPIEXEC" that reflect the paths to the 
+
 Now, cd into the directory you just unpacked on Stampede. I like to test everything by running a short simulation for one of the anchors to ensure that it was prepared properly.
 
 To prepare the anchor files for umbrella sampling, determine the lowest anchor number (in this case, it's four), type the following command:
@@ -268,7 +290,6 @@ python ~/control.py check all ens_equil
 This will print out a series of information about each of the anchors, and the number of timesteps that have been completed for the umbrella sampling. If the "last timestep" output is less than the number of timesteps wanted for the umbrella sampling, you would use a command similar to the following:
 
 python ~/control.py resubmit 4 ens_equil
-** This didn't work for Sasha. Error: wrong printed ens_equil .namd name. Check resubmit in control.py **
 
 Of course, you might use a different anchor index. You will need to enter the ens_equil/ directory again, find the submission file named something like: "ens_equil256_2.submit", modify any parameters, and then submit it using sbatch.
 
@@ -358,6 +379,7 @@ Since earlier in the tutorial, you probably only ran the umbrella sampling simul
 
 You will need access to an AmaroLab computer like Honolua for this commands. Log into an 
 
+###Fix file location###
 scp /extra/banzai/alheynem/seekr/tryp_dcds/tryp_ens_equil_trajectories.tgz your_username_here@stampede.tacc.utexas.edu:/scratch/directory/on/stampede
 
 Of course, replace /scratch/directory/on/stampede with the true path (Log into Stampede and type: "echo $SCRATCH" to see a path to this), along with your_username_here replaced with your Stampede username.
@@ -408,13 +430,6 @@ Copy the mpiexec program from Sasha's directory to a location of your choice. Yo
 
 cp /home1/02520/heyneman/namd_lv/mpiexec $HOME
 
-Now, you will need to put a copy of control.py, a program in the SEEKR package, onto Stampede somewhere. You could probably do this by making another SEEKR git clone in your home directory of Stampede.
-
-Use the program vi or similar text editing program to modify the control.py script itself. About 60 lines down, there are two variables named 'namd_special' and 'charm_special'. Change these variables to the path you remember from the compile section above that contain the namd2 and charmrun programs. Also change the 'mpi_exec' variable to point to the location to where you copied the program 'mpiexec'.
-
-Make sure the 'milestoning.tcl' file is located in this folder. It can be found in the main SEEKR script directory.
-**Clarify WHICH folder.
-**.xml, not .tcl?
 
 Now, it's time to submit the forward-reverse stage job. Run the following command using control.py:
 **From the trypsin_project_directory
@@ -425,14 +440,11 @@ Of course, replace /path/to/control.py with the path to the control.py SEEKR pro
 
 Change directory into one of the anchors, say anchor 4. Go through the 'md' and 'fwd_rev' directories. From here, you can view the '.namd' and '.submit' files to see how the fwd-rev stage is run. There is a lot of special code in the '.namd' files that helps in the assignment of simulations to replicas, as well as switching between reverse and forward stages, starting up where jobs are left off etc.
 
-(NOTE to Sasha and Ben: Let me take a look at the input before you launch. Also, probably only one set of this data should be created. Maybe only one of you guys should actually run the full calculation, or maybe you guys can split the anchors between you both or something.)
-
 Submit the jobs using the following command:
 
 sbatch fwd_rev64_1.submit
 
-The job will run for up to 48 hours. You can check on the job the same way using the 'showq -u' or 'qstat' commands.
-** Won't it only run 12 hours?
+The job will run for up to 12 hours. You can check on the job the same way using the 'showq -u' or 'qstat' commands.
 
 ============= BD STAGE: =============
 
