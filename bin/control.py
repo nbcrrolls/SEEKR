@@ -38,7 +38,7 @@ except ImportError: # then we cannot use this library of subprocess
 
 #from sys import argv
 from adv_template import Adv_template
-from namd_template import Namd_template
+from namd_inputs import Namd_template
 import namd_inputs
 import re
 from pprint import pprint
@@ -52,13 +52,26 @@ namd_inputs_dir = os.path.dirname(os.path.realpath(namd_inputs.__file__))
 
 #acct = "TG-CHE060073N"
 #acct = "TG-MCB140064" # My personal acct number
+acct="NONE"
 #queue = "normal"
 #namd_abrams = "/home1/01624/lvotapka/NAMD_2.9_Source/Linux-x86_64-g++/namd2"
 #namd_abrams = "/opt/namd/bin/namd2"
 #namd_abrams = "/home1/01624/lvotapka/NAMD_2.9_Source/Linux-x86_64-g++/namd2"
-namd_special = '/home1/03918/tg832177/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/namd2' # a special build of NAMD for this purpose
-charm_special = '/home1/03918/tg832177/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/charmrun' # required for namd_special above
-mpiexec = '/home1/03918/tg832177/mpiexec'
+#namd_special = '/home1/03918/tg832177/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/namd2' # a special build of NAMD for this purpose
+#charm_special = '/home1/03918/tg832177/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/charmrun' # required for namd_special above
+#mpiexec = '/home1/03918/tg832177/mpiexec'
+
+#program_paths_file='program_paths.pkl'
+#program_paths=pickle.load(open(program_paths_file,'rb'))
+
+#namd_special=program_paths['namd_special']
+#charm_special=program_paths['charm_special']
+#mpiexec=program_paths['mpiexec']
+
+namd_special=os.environ['NAMD_SEEKR']
+charm_special=os.environ['CHARM_SEEKR']
+mpiexec=os.environ['MPIEXEC']
+
 
 ALL_COMMANDS = ['command','submit','resubmit','check','cancel','modify','prep']
 POSSIBLE_STAGES=['min','temp_equil','ens_equil','fwd_rev',] # the possible stages to search for
@@ -214,19 +227,19 @@ mpirun_rsh -export \
 
 # Stampede submission parameters
 min_params = {
-'procs':DEFAULT_NUM_PROCS,'time_str':'12:00:00', 'template':stampede_submit_template, 'acct': "TG-CHE060073N", 'queue':'normal',
+'procs':DEFAULT_NUM_PROCS,'time_str':'12:00:00', 'template':stampede_submit_template, 'acct': acct, 'queue':'normal',
 }
 
 temp_equil_params = {
-'procs':DEFAULT_NUM_PROCS,'time_str':'02:00:00', 'template':stampede_submit_template, 'acct': "TG-CHE060073N", 'queue':'normal',
+'procs':DEFAULT_NUM_PROCS,'time_str':'02:00:00', 'template':stampede_submit_template, 'acct': acct, 'queue':'normal',
 }
 
 ens_equil_params = {
-'procs':DEFAULT_NUM_PROCS,'time_str':DEFAULT_TIME_STR, 'template':stampede_submit_template, 'acct': "TG-CHE060073N", 'queue':'normal',
+'procs':DEFAULT_NUM_PROCS,'time_str':DEFAULT_TIME_STR, 'template':stampede_submit_template, 'acct': acct, 'queue':'normal',
 }
 
 fwd_rev_params = {
-'procs':DEFAULT_NUM_PROCS,'time_str':DEFAULT_TIME_STR, 'charm_special': charm_special, 'namd_special':namd_special, 'mpiexec': mpiexec,  'num_replicas':16, 'template':stampede_submit_replica_template, 'acct': "TG-CHE060073N", 'queue':'normal',
+'procs':DEFAULT_NUM_PROCS,'time_str':DEFAULT_TIME_STR, 'charm_special': charm_special, 'namd_special':namd_special, 'mpiexec': mpiexec,  'num_replicas':16, 'template':stampede_submit_replica_template, 'acct': acct", 'queue':'normal',
 }
 
 submission_template = stampede_submit_template
@@ -398,21 +411,19 @@ class Stage():
     # first, find all previous submission files in this directory
     os.chdir(self.dir)
     prev_out_filename, firsttimestep = self.get_last_timestep()
-    print "prev_out_filename", prev_out_filename
-    prev_num = int(re.findall(r".+(\d+).out*", prev_out_filename)[0])
+    prev_num = int(re.findall(r".+(\d+).out", prev_out_filename)[0])
     next_num = prev_num + 1
     prev_prev_num = prev_num - 1
     print "      firsttimestep:", firsttimestep
     self.number = next_num
+    new_namd_filename = '%s%d.namd' % (self.name,self.number)
     
     if self.name == 'fwd_rev':
-      new_namd_filename = '%s%d.namd' % (self.name,self.number)
       # just copy the existing fwd_rev namd input file
       old_namd_filename = '%s%d.namd' % (self.name,prev_num)
       shutil.copyfile(old_namd_filename, new_namd_filename)
     else:
       # modify the new NAMD input file
-      new_namd_filename = '%s_0_%d.namd' % (self.name,self.number)
       namd_params_filename='namd_parameters.pkl'
       namd_params=pickle.load(open(namd_params_filename,'rb'))
       newparams = new_namd_output(namd_params, self.name, next_num, prev_num, firsttimestep)
@@ -479,16 +490,8 @@ class Stage():
     '''finds the last timestep executed for this stage'''
     os.chdir(self.dir)
     output_files = glob.glob('%s*.out*' % self.name) # use glob pattern matching to get all the output files
-    #print "self.name", self.name
-    #print "outfiles", output_files
-    if self.name == 'ens_equil':
-      output_files = [outfile for outfile in output_files if re.match("%s_\d+_\d+\.out" % self.name, outfile)] # further filter the files from the glob output
-    elif self.name == 'fwd_rev':
-     # print "getting last step for fwd_rev"
-      #print self.name
-      output_files = [outfile for outfile in output_files if re.match("%s\d+.out.*" % self.name, outfile)] # further filter the files from the glob output
-    else:
-      print "This stage cannot be resubmitted"
+
+    output_files = [outfile for outfile in output_files if re.match("%s\d+\.out.*" % self.name, outfile)] # further filter the files from the glob output
     # now the files must be sorted to get the latest one
     #print "output files:", output_files
     if not output_files:
@@ -615,11 +618,12 @@ class Stage():
     elif task.startswith("command"):
       cmd = ' '.join(task.split()[1:])
       print "      now executing: '%s' in stage: %s" % (cmd, self.name)
-      #submit_stdout = self.command(cmd)
-      #print "      result:", submit_stdout
+      submit_stdout = self.command(cmd)
+      print "      result:", submit_stdout
 
     elif task == "cancel":
-      print "      now cancelling job launched from stage: %s" % self.name
+      #print "      now cancelling job launched from stage: %s" % self.name
+      print "      Alert: 'cancel' command not yet implemented."
 
     elif task.startswith("modify"):
       param = task.split()[1]
@@ -641,7 +645,7 @@ def tail(f, n, offset=None):
 
   while 1:
     try:
-      f.seek(-(int(avg_line_length * to_read)), 2)
+      f.seek(-(avg_line_length * to_read), 2)
     except IOError:
       # woops.  apparently file is smaller than what we want
       # to step back, go to the beginning instead
@@ -659,9 +663,9 @@ def new_namd_output(srcparams, stage, next_num, prev_num, firsttimestep):
  # srcparams=pickle.load(open(srcfile,'r+b'))
   srcparams['firsttimestep']=firsttimestep
   srcparams['inpdir']=''
-  srcparams['inpfilename']='%s_0_%d' % (stage, prev_num)
+  srcparams['inpfilename']='%s%d' % (stage, prev_num)
   srcparams['outdir']=''
-  srcparams['outfilename']='%s_0_%d' % (stage, next_num)
+  srcparams['outfilename']='%s%d' % (stage, next_num)
   #pickle.dump(namd_params, (open(srcfile, 'wb'))
   #for problem_key in problem_keys:
   #  if problem_key in srcparams.keys():
@@ -732,10 +736,10 @@ def fill_params(stage, starting_params):
 if __name__ == "__main__":
   # first extract the commands
 
-  parser = argparse.ArgumentParser(description="The SEEKR program that is designed to make the numerous and parallelized MD phases to be easier to submit, manage, prepare, and control on a supercomputer or cluster. \n\n Examples:\n  python control.py submit all min\n  python control.py check 6 temp_equil\n  python control.py modify all ens_equil numsteps 20000\n  python control.py resubmit all ens_equil")
+  parser = argparse.ArgumentParser(description="The SEEKR program that is designed to make the numerous and parallelized MD phases to be easier to submit, manage, prepare, and control on a supercomputer or cluster. Examples: 'python control.py submit all min',  'python control.py check 6 temp_equil',  'python control.py modify all ens_equil numsteps 20000', 'python control.py resubmit all ens_equil'")
   # positional arguments
   command_choices = ["submit", "resubmit", "command", "check", "status", "cancel","modify", "prep" ]
-  parser.add_argument('command', metavar='COMMAND', type=str, choices=command_choices, help="the command to execute")
+  parser.add_argument('command', metavar='COMMAND', type=str, choices=command_choices, help="the command to execute. Options include: %s" % (', '.join(command_choices)))
   parser.add_argument('anchors', metavar='ANCHORS', type=str, help="the anchors to execute the command for. May be the keyword 'all', a single integer, or comma-separated list of integers, or dash to indicate a number range. Examples: 'all', '3', '2,5,7', '1-4', '1,3-6,8'.")
   parser.add_argument('stage', metavar='STAGE', type=str, help="Which stage of the anchor(s) to apply the command to. At this time, relevant stages are 'ens_equil' and 'fwd_rev'.")
 #BRJ 2/1
