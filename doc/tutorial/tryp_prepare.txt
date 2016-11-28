@@ -239,17 +239,118 @@ Once that command is done, use scp or sftp to transfer to your scratch directory
 
 tar -xzf tryp_pre_equil.tgz
 
+Calculations in this section are typically performed on a supercomputer. This
+tutorial assumes you will be running on the stampede supercomputer.
+
+We will first compile a special version of NAMD needed for the fwd_rev
+phase...
+
+How to compile for Stampede:
+Obtain the NAMD source code by going to your home directory, create a
+directory named, say, namd_compile. Then 'cd' into it. From here, run:
+
+cp /home1/02520/heyneman/namd_compile/NAMD_CVS-2015-11-02_Source.tar.gz
+
+Then unpack it with tar -xzf NAMD_CVS-2015-11-02_Source.tar.gz
+
+Now you will copy some code files from the same folder into your source folder
+using these commands:
+
+cp /home1/02520/heyneman/namd_compile/gauss.C NAMD_CVS-2015-11-02_Source/src/
+cp /home1/02520/heyneman/namd_compile/eigeng.c NAMD_CVS-2015-11-02_Source/src/
+cp /home1/02520/heyneman/namd_compile/TclCommands.C
+NAMD_CVS-2015-11-02_Source/src/
+cp /home1/02520/heyneman/namd_compile/TclVec.C NAMD_CVS-2015-11-02_Source/src/
+
+This will overwrite the existing TclVec.C and TclCommands.C source files
+because SEEKR requires adaptations of the NAMD code. Trust us... we know what
+we're doing ;)
+
+Next, copy over the script that you will use to build charmrun, which NAMD
+needs to run on a parallel system like Stampede. Do so using this command:
+
+cp /home1/02520/heyneman/namd_compile/build_namd.bash ./
+
+View the script if you want, and modify the variables at the top as you see
+fit. The $WORKDIR variable is where the program is downloaded and compiled.
+Then the $HOMEDIR variable is actually where the final program will be placed.
+Run using this command:
+
+bash build_namd.bash
+
+This script will probably run for a long time (about an hour). In fact, if it
+stops instantly, check the output for errors because it probably didn't work,
+even if it says it worked. If you have trouble, try copying the charm-6.7.0
+tarball from Sasha's directory:
+
+cp /home1/02520/heyneman/namd_compile/charm-6.7.0.tar $WORK/charm-6.7.0-verbs-linux-x86_64-iccstatic
+
+Then run this command:
+
+tar -xf $WORK/charm-6.7.0-verbs-linux-x86_64-iccstatic/charm-6.7.0.tar
+
+Then go into the build_namd.bash script and remove or comment out the line that begins with 'wget'. Then re-run the script.
+
+Now we need to compile NAMD. The default way to do this is pretty well described in the notes.txt file in the NAMD directory. But we will give
+detailed instructions here.
+
+The following commands download and install TCL and FFTW libraries:
+  (cd to NAMD_2.10_Source if you're not already there)
+  wget http://www.ks.uiuc.edu/Research/namd/libraries/fftw-linux-x86_64.tar.gz
+  tar xzf fftw-linux-x86_64.tar.gz
+  mv linux-x86_64 fftw
+  wget http://www.ks.uiuc.edu/Research/namd/libraries/tcl8.5.9-linux-x86_64.tar.gz
+  wget http://www.ks.uiuc.edu/Research/namd/libraries/tcl8.5.9-linux-x86_64-threaded.tar.gz
+  tar xzf tcl8.5.9-linux-x86_64.tar.gz
+  tar xzf tcl8.5.9-linux-x86_64-threaded.tar.gz
+  mv tcl8.5.9-linux-x86_64 tcl
+  mv tcl8.5.9-linux-x86_64-threaded tcl-threaded
+
+Edit the Make.charm configuration file:
+  vi Make.charm
+
+Once inside, set CHARMBASE to full path to charm. In our case, this is the
+directory: ${HOME}/charm-6.7.0
+
+CHARMBASE = ${HOME}/charm-6.7.0
+
+Set up build directory and compile:
+  ./config Linux-x86_64-g++ --charm-arch verbs-linux-x86_64-iccstatic
+  cd Linux-x86_64-g++
+  make
+
+This last step is likely to take a long time. (about 15 minutes)
+
+Copy the mpiexec program from Sasha's directory to a location of your choice.
+Your home directory is fine:
+
+cp /home1/02520/heyneman/namd_lv/mpiexec $HOME
+
 The program that we use to control jobs on the supercomputer is called control.py. Make sure that control.py exists in your home directory on Stampede.
 
-Control.py requires you to define the environment variables "NAMD_SEEKR", "CHARM_SEEKR", and "MPIEXEC" that reflect the paths to the 
+Control.py requires you to define the environment variables "NAMD_SEEKR", "CHARM_SEEKR", and "MPIEXEC" that reflect the paths to the software you just compiled.
 
-Now, cd into the directory you just unpacked on Stampede. I like to test everything by running a short simulation for one of the anchors to ensure that it was prepared properly.
+To do this, in your home directory, edit the .bashrc file: "vi .bashrc" 
+ 
+add the following lines, changint the path to reflect where the special build
+is installed
+export NAMD_SEEKR="/path/to/new/compile/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/namd2"
+export CHARM_SEEKR="/path/to/new/compile/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/charmrun"
+export MPIEXEC="/path/to/mpiexec"
+
+
+Running Ensemble Equilibrations:
+
+Now, cd into the project directory you just unpacked on Stampede. I like to test everything by running a short simulation for one of the anchors to ensure that it was prepared properly.
 
 To prepare the anchor files for umbrella sampling, determine the lowest anchor number (in this case, it's four), type the following command:
 
 python ~/control.py submit 4 ens_equil 
 
-Even though the output says that it's executing an sbatch command, it actually is not. We will have to do that later manually.
+Even though the output says that it's executing an sbatch command, it actually is not beacuse Stampede does not allow this. It is always a good idea to check that it did not submit, though, by typing 
+"showq -u"
+
+We will have to submit it manually later.
 
 The control.py program takes commands according to the following template:
 
@@ -271,7 +372,14 @@ Open the submission file using vim or vi.
 
 Change the amount of time to run from 48 hours to only 10 minutes. You can do this by finding an SBATCH argument near the top of the file specified by "-t" and contains the text: "48:00:00". Change this text to "00:10:00", which corresponds to ten minutes. (This can also be done with the '-t' argument to control.py)
 
-You can also change other information about the submission at this time if you desire. You can also change the NAMD file if desired, although SEEKR should have specified everything properly.** SEEKR DOESN'T SPECIFY IT PROPERLY, NEEDS EDITING.** Now submit the umbrella sampling job:
+Change the number of processors from 256 to 128. This can also be done using the -p argument in control.py
+
+Finally, you will need to add your account information after the -A option.
+This can also be done using the -a argument in control.py
+
+You can also change other information about the submission at this time if you desire. You can also change the NAMD file if desired, although SEEKR should have specified everything properly.
+
+ Now submit the umbrella sampling job:
 
 sbatch ens_equil256_1.submit
 
@@ -302,76 +410,6 @@ Once the umbrella sampling stage is complete, it's time to start the fwd_rev sta
 Obtain the milestoning.tcl file from the SEEKR directory and place it into the trypsin_project_directory you determined in your input file.
 
 Then, you will need to obtain or compile a special build of NAMD2 as well as a program called Charm++.
-
-How to obtain NAMD already build for Stampede:
-Go to your own home directory in Stampede. From Sasha's home directory, copy over the following folder using this command:
-
-cp -r /home1/02520/heyneman/namd_lv ./
-
-
-How to compile for Stampede:
-Obtain the NAMD source code by going to your home directory, create a directory named, say, namd_compile. Then 'cd' into it. From here, run:
-
-cp /home1/02520/heyneman/namd_compile/NAMD_CVS-2015-11-02_Source.tar.gz
-
-Then unpack it with tar -xzf NAMD_CVS-2015-11-02_Source.tar.gz
-
-Now you will copy some code files from the same folder into your source folder using these commands:
-
-cp /home1/02520/heyneman/namd_compile/gauss.C NAMD_CVS-2015-11-02_Source/src/
-cp /home1/02520/heyneman/namd_compile/eigeng.c NAMD_CVS-2015-11-02_Source/src/
-cp /home1/02520/heyneman/namd_compile/TclCommands.C NAMD_CVS-2015-11-02_Source/src/
-cp /home1/02520/heyneman/namd_compile/TclVec.C NAMD_CVS-2015-11-02_Source/src/
-
-This will overwrite the existing TclVec.C and TclCommands.C source files because SEEKR requires adaptations of the NAMD code. Trust us... we know what we're doing ;)
-
-Next, copy over the script that you will use to build charmrun, which NAMD needs to run on a parallel system like Stampede. Do so using this command:
-
-cp /home1/02520/heyneman/namd_compile/build_namd.bash ./
-
-View the script if you want, and modify the variables at the top as you see fit. The $WORKDIR variable is where the program is downloaded and compiled. Then the $HOMEDIR variable is actually where the final program will be placed. Run using this command:
-
-bash build_namd.bash
-
-This script will probably run for a long time (about an hour). In fact, if it stops instantly, check the output for errors because it probably didn't work, even if it says it worked. If you have trouble, try copying the charm-6.7.0 tarball from Sasha's directory:
-
-cp /home1/02520/heyneman/namd_compile/charm-6.7.0.tar $WORK/charm-6.7.0-verbs-linux-x86_64-iccstatic
-
-Then run this command:
-
-tar -xf $WORK/charm-6.7.0-verbs-linux-x86_64-iccstatic/charm-6.7.0.tar
-
-Then go into the build_namd.bash script and remove or comment out the line that begins with 'wget'. Then re-run the script.
-
-Now we need to compile NAMD. The default way to do this is pretty well described in the notes.txt file in the NAMD directory. But we will give detailed instructions here.
-
-The following commands download and install TCL and FFTW libraries:
-  (cd to NAMD_2.10_Source if you're not already there)
-  wget http://www.ks.uiuc.edu/Research/namd/libraries/fftw-linux-x86_64.tar.gz
-  tar xzf fftw-linux-x86_64.tar.gz
-  mv linux-x86_64 fftw
-  wget http://www.ks.uiuc.edu/Research/namd/libraries/tcl8.5.9-linux-x86_64.tar.gz
-  wget http://www.ks.uiuc.edu/Research/namd/libraries/tcl8.5.9-linux-x86_64-threaded.tar.gz
-  tar xzf tcl8.5.9-linux-x86_64.tar.gz
-  tar xzf tcl8.5.9-linux-x86_64-threaded.tar.gz
-  mv tcl8.5.9-linux-x86_64 tcl
-  mv tcl8.5.9-linux-x86_64-threaded tcl-threaded
-
-Edit the Make.charm configuration file:
-  vi Make.charm  
-  
-Once inside, set CHARMBASE to full path to charm. In our case, this is the directory: ${HOME}/charm-6.7.0
-
-CHARMBASE = ${HOME}/charm-6.7.0
-
-Set up build directory and compile:
-  ./config Linux-x86_64-g++ --charm-arch verbs-linux-x86_64-iccstatic
-  cd Linux-x86_64-g++
-  make
-
-This last step is likely to take a long time. (about 15 minutes). 
-
-Take note of the current directory. This is where the namd2 and charmrun programs are that we will need to reference later. /home1/02520/heyneman/namd_compile/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++
 
 Submitting the fwd_rev stage:
 
@@ -434,7 +472,7 @@ cp /home1/02520/heyneman/namd_lv/mpiexec $HOME
 Now, it's time to submit the forward-reverse stage job. Run the following command using control.py:
 **From the trypsin_project_directory
 
-python /path/to/control.py -p 64 -nr 8 -t 12:00:00 submit all fwd_rev
+python /path/to/control.py -p 64 -nr 16 -t 12:00:00 submit all fwd_rev
 
 Of course, replace /path/to/control.py with the path to the control.py SEEKR program. The '-p' option will request 64 processors. If you find that you can perform calculations more efficiently with a different number of processors, you can change this number. The '-nr' option defines the number of replicas, that is, the number of concurrent fwd-rev stage jobs running at once. The number of processors per replica is equal to (number of processors / number of replicas). The '-t' option specifies the amount of time to run in hours:minutes:seconds. Run control.py with the '-h' option to see additional arguments that are available.
 

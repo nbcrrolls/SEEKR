@@ -346,7 +346,7 @@ proc calcforces { } {
       if { $STAGE == "reverse"} {
         set aborting "True"
         if {$whoami != $crossed } {
-          outprint "Reverse succeeded."
+          outprint "Reverse succeeded. Crossed: $crossed"
           append_to_file $REV_FILENAME "job${ID}_${VEL_ID} succeeded incubation_time: $incubation_time"
           set reverse_failed "False"  ;# then the reversal has crossed another milestone, and we should record it
         } else {
