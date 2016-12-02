@@ -152,7 +152,8 @@ class Milestone():
       #pprint(transition_lines)
     # feed the lines into the Transition object
     for line in transition_lines:
-      self.transitions.append(Transition(line))
+      new_transition = Transition(line)
+      self.transitions.append(new_transition)
     return
 
   def get_md_transition_statistics(self, md_time_factor=DEFAULT_MD_TIME_FACTOR):
@@ -160,7 +161,10 @@ class Milestone():
     counts = {} # all the sources and their destinations
     total_counts = {} # keeps track of all counts to any destination
     total_times = {} # the total time of all counts, to be averaged later
+    total_counts_src_dest = {}
+    total_times_src_dest = {}
     avg_times = {} # the times to transition out of each source
+    avg_times_src_dest = {}
     site_index = self.site
     site_name = self.sitename
     for transition in self.transitions:
@@ -182,10 +186,20 @@ class Milestone():
         counts[src_key] = {dest_key:1}
         total_counts[src_key] = 1
         total_times[src_key] = time * md_time_factor
+        
+      # EXPERIMENTAL
+      src_dest_key = (src_key,dest_key)
+      if src_dest_key in total_times_src_dest.keys():
+        total_times_src_dest[src_dest_key] += time * md_time_factor
+        total_counts_src_dest[src_dest_key] += 1
+      else:
+        total_times_src_dest[(src_key,dest_key)] = time * md_time_factor
+        total_counts_src_dest[src_dest_key] = 1
+      
     for src_key in total_times.keys():
       avg_times[src_key] = total_times[src_key] / total_counts[src_key]
 
-    return counts, total_counts, total_times, avg_times
+    return counts, total_counts, total_times, avg_times, total_times_src_dest, total_counts_src_dest
     
   def get_bd_transition_statistics(self, results_filename=os.path.join("bd","results.xml")):
     'read the BD results.xml file for the anchors to determine transition statistics and times for the BD stage'
@@ -216,6 +230,7 @@ class Transition():
     linelist = linetail.split(',') # split line into a list of elements
     dictlist = map(lambda a: a.strip().split(': '), linelist) # map the line to a list of lists for dictionary conversion
     linedict = dict(dictlist) # convert the list of lists into a dictionary
+    self.id = int(linedict['ID'].strip())
     self.src = int(linedict['source'].strip())
     self.dest = int(linedict['destination'].strip())
     self.cur_step = float(linedict['stepnum'].strip())
@@ -548,6 +563,7 @@ def get_beta_from_K_q0(K, q0, bound_indices):
   K_inf = np.matrix(K) ** 99999999
   #n,m = K_inf.shape
   q_inf = np.dot(K_inf, q0)
+  #print "q_inf:", q_inf
   beta = 0.0
   for bound_index in bound_indices:
     beta += q_inf[bound_index, 0]
@@ -561,7 +577,7 @@ def main():
   onoff_group.add_argument('--off', dest="off", default=False, help="Perform a k-off calculation - where a high state is the sink", action="store_true")
   onoff_group.add_argument('--free_energy', dest="free_energy", default=False, help="Calculate a free energy profile - where there are no sinks", action="store_true")
   parser.add_argument('-m', '--milestones', dest="milestones", type=str, help="Milestones file") # This should contain most of what the user needs
-  parser.add_argument('-b', '--bound_states', dest="bound_states", type=str, default=0, help="The milestone index of the bound state(s). If different bound states exist for different sites, then separate with a colon. For multiple bound states, separate with commas. Examples: '0', '1:2', '0:1,1:3'.")
+  parser.add_argument('-b', '--bound_states', dest="bound_states", type=str, default="0", help="The milestone index of the bound state(s). If different bound states exist for different sites, then separate with a colon. For multiple bound states, separate with commas. Examples: '0', '1:2', '0:1,1:3'.")
   # TODO: escape state?
   parser.add_argument('--nobd', dest="nobd", help="Do not include the BD statistics in the calculation")
   parser.add_argument('--nomd', dest="nomd", help="Do not include the MD statistics in the calculation")
@@ -599,7 +615,7 @@ def main():
   model = parse_milestoning_file(milestone_filename)
   #model.make_directories()
   # gather MD data - fill into model
-  counts = {}; total_counts = {}; total_times = {}; avg_times = {}; trans = {}
+  counts = {}; total_counts = {}; total_times = {}; avg_times = {}; total_times_src_dest = {}; avg_times_src_dest = {}; total_counts_src_dest = {}; trans = {}
   end_indeces = []
   for site in model.sites:
     for milestone in site.milestones:
@@ -609,9 +625,11 @@ def main():
       if milestone.md == True and milestone.directory:
         print 'parsing md transitions for:Anchor', milestone.fullname
         milestone.parse_md_transitions()
-        this_counts, this_total_counts, this_total_times, this_avg_times = milestone.get_md_transition_statistics(model.md_time_factor) # find the count statistics
+        this_counts, this_total_counts, this_total_times, this_avg_times, this_total_times_src_dest, this_total_counts_src_dest = milestone.get_md_transition_statistics(model.md_time_factor) # find the count statistics
         total_counts = add_dictionaries(total_counts, this_total_counts)
         total_times = add_dictionaries(total_times, this_total_times)
+        total_counts_src_dest = add_dictionaries(total_counts_src_dest, this_total_counts_src_dest)
+        total_times_src_dest = add_dictionaries(total_times_src_dest, this_total_times_src_dest)
         for src_key in this_counts.keys():
           if src_key in counts.keys():
             counts[src_key] = add_dictionaries(counts[src_key], this_counts[src_key])
@@ -633,6 +651,9 @@ def main():
         
   for src_key in total_times.keys(): # construct the average incubation times
     avg_times[src_key] = total_times[src_key] / total_counts[src_key]
+    
+  for src_dest_key in total_times_src_dest.keys():
+    avg_times_src_dest[src_dest_key] = total_times_src_dest[src_dest_key] / total_counts_src_dest[src_dest_key]
 
   for src_key in counts.keys():
     temp = {}
@@ -655,6 +676,9 @@ def main():
   bound_keys = []
   for dest_key in b_surface_counts[src_key].keys():
     b_surface_trans[src_key][dest_key] = float(b_surface_counts[src_key][dest_key]) / float(b_surface_total_counts[src_key])
+  
+  print "avg_times_src_dest:"
+  print avg_times_src_dest
   
   print "bound_dict:", bound_dict
   
@@ -692,11 +716,11 @@ def main():
     avg_times['inf'] = 0.0
     
     # TODO: remove this hardcode
-    trans['site1_0'] = {'site1_1':1.0}
-    counts['site1_0'] = {'site1_1':1e9}
-    avg_times['site1_0'] = 1e11
+    #trans['site1_0'] = {'site1_1':1.0}
+    #counts['site1_0'] = {'site1_1':1e9}
+    #avg_times['site1_0'] = 1e11
     
-    avg_times['site1_6'] = 1e8
+    #avg_times['site1_6'] = 1e8
     
   elif calc_type == "free_energy": # then the user wants a free energy profile
     trans['inf'] = {'inf':0.0}
@@ -711,13 +735,13 @@ def main():
             trans[key]['inf'] = 0.0
             
     # TODO: remove this hardcode
-    trans['site1_0'] = {'site1_0':0.5, 'site1_1':0.5}
-    counts['site1_0'] = {'site1_0':1e9, 'site1_1':1e9}
-    avg_times['site1_0'] = 1e0
+    #trans['site1_0'] = {'site1_0':0.5, 'site1_1':0.5}
+    #counts['site1_0'] = {'site1_0':1e9, 'site1_1':1e9}
+    #avg_times['site1_0'] = 1e0
     
-    trans['inf'] = {'site1_6':1.0}
-    counts['inf'] = {'site1_6':1e9}
-    avg_times['inf'] = 1e0
+    #trans['inf'] = {'site1_6':1.0}
+    #counts['inf'] = {'site1_6':1e9}
+    #avg_times['inf'] = 1e0
     
     '''
     found_sink = False
@@ -859,9 +883,11 @@ def main():
   if calc_type == "off":
     #t_mat_sink = np.matrix(t_mat_sink)
     I = np.matrix(np.identity(n))
-    aux = np.linalg.solve(I - K.T, avg_t)
+    #aux = np.linalg.solve(I - K.T, avg_t)
+    aux = np.linalg.solve(I - K, q0)
     print "aux:", aux
-    mfpt = q0.T.dot(aux)
+    #mfpt = q0.T.dot(aux)
+    mfpt = avg_t.T.dot(aux)
     print "MFPT:", mfpt, "fs"
     print "k-off:", 1e15/mfpt, "s^-1"
 

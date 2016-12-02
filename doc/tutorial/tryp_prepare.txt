@@ -92,10 +92,17 @@ Of course change /path/to/tutorial to the true path to the tutorial files...
 And write the following also:
       
 leap_postload_commands [
+        bond mol.7.SG mol.137.SG,
+        bond mol.25.SG mol.41.SG,
+        bond mol.109.SG mol.210.SG,
+        bond mol.116.SG mol.183.SG,
+        bond mol.148.SG mol.162.SG,
+        bond mol.173.SG mol.197.SG,
         charge holo,
         check holo,
       ]
 
+Notice that I have to EXPLICITLY put the disulfide bonds into the leap script. Remember to do this for your molecule and save yourself some heartache.
 
 Set 'leap_program' to 'tleap'
 

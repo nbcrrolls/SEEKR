@@ -281,8 +281,10 @@ for {set chunk_id 0} {$chunk_id < $NUM_CHUNKS} {incr chunk_id} {
   if { ! [myReplica] } {
   set num_submitted_jobs 0 ;# keep track of the number of jobs sent to the work queue, in case we need to add some dummy jobs
   for { set icounter 0 } { $icounter < $NUM_CONFIGS_PER_CHUNK } { incr icounter } { ;# for all possible reversals we are going to run
+    set i [expr "($chunk_id * $NUM_CONFIGS_PER_CHUNK) + $icounter"]
     for { set j 0 } { $j < $LAUNCHES_PER_CONFIG } { incr j } { ;# the number of times to reinitialize velocities at this position...
-      set i [expr "($chunk_id * $NUM_CONFIGS_PER_CHUNK) + $icounter"]
+      reinitvels $TEMP ;# randomly assign velocities based on temperature for the next job
+      print "SEEKR: done initializing velocities for step $i. Velocity reinit $j."
       set stepnum 0
       set incubation_start 0
       set start_stage "reverse"
@@ -345,38 +347,36 @@ for {set chunk_id 0} {$chunk_id < $NUM_CHUNKS} {incr chunk_id} {
       
       # ReplicaBarrier? We need to let all the replicas work through the systems that they have before assigning new ones.
       #if { [expr "(($i * $LAUNCHES_PER_CONFIG) + $j) % $FRAME_CHUNK_SIZE"] == 0} { schedule_work } ;# this is designed to prevent memory overload
+    }
       
-      if {$umbrella_dcds_index > [llength $umbrella_dcds]} {set no_more_umb_dcds "True"; print "Requested reversals exceeds DCD file length. Skipping all jobs after this point."; break}
-      for {set k 1} {$k < $umbrella_stride} {incr k} { ;# skip ahead by striding through the dcd
-        set result [coorfile skip] ;# skip to the next frame for the next job
-        if {$result == -1} { ;# then we've reached the end of this DCD file
-          coorfile close ;# close it
-          incr umbrella_dcds_index ;# increment the DCD filename index
-          if {$umbrella_dcds_index >= [llength $umbrella_dcds]} {set no_more_umb_dcds "True"; print "Requested reversals exceeds DCD file length. Skipping all jobs after this point."; break}
-          set umbrella_dcd [lindex $umbrella_dcds $umbrella_dcds_index] ;# pull out the relevant DCD file name
-          print "Opening dcd file: $umbrella_dcd. index: $umbrella_dcds_index"
-          coorfile open dcd $umbrella_dcd ;# open the file for reading
-          coorfile skip ;# skip the first frame of this new DCD file
-        }
-      }
-      if { $no_more_umb_dcds == "True" } { break }
-      print "SEEKR: reading new positions"
-
-      set result [coorfile read] ;# read positions from this frame in dcd for the next job
+    if {$umbrella_dcds_index > [llength $umbrella_dcds]} {set no_more_umb_dcds "True"; print "Requested reversals exceeds DCD file length. Skipping all jobs after this point."; break}
+    for {set k 1} {$k < $umbrella_stride} {incr k} { ;# skip ahead by striding through the dcd
+      set result [coorfile skip] ;# skip to the next frame for the next job
       if {$result == -1} { ;# then we've reached the end of this DCD file
         coorfile close ;# close it
         incr umbrella_dcds_index ;# increment the DCD filename index
         if {$umbrella_dcds_index >= [llength $umbrella_dcds]} {set no_more_umb_dcds "True"; print "Requested reversals exceeds DCD file length. Skipping all jobs after this point."; break}
         set umbrella_dcd [lindex $umbrella_dcds $umbrella_dcds_index] ;# pull out the relevant DCD file name
-        print "Opening dcd file: $umbrella_dcd. index: $umbrella_dcds_index"
+       print "Opening dcd file: $umbrella_dcd. index: $umbrella_dcds_index"
         coorfile open dcd $umbrella_dcd ;# open the file for reading
-        coorfile read ;# read this frame of the new DCD for the next job
+        coorfile skip ;# skip the first frame of this new DCD file
       }
-
-      print "SEEKR: done reading positions for step $i"
-      reinitvels $TEMP ;# randomly assign velocities based on temperature for the next job
-      print "SEEKR: done initializing velocities for step $i. Velocity reinit $j."
     }
+    if { $no_more_umb_dcds == "True" } { break }
+    print "SEEKR: reading new positions"
+
+    set result [coorfile read] ;# read positions from this frame in dcd for the next job
+    if {$result == -1} { ;# then we've reached the end of this DCD file
+      coorfile close ;# close it
+      incr umbrella_dcds_index ;# increment the DCD filename index
+      if {$umbrella_dcds_index >= [llength $umbrella_dcds]} {set no_more_umb_dcds "True"; print "Requested reversals exceeds DCD file length. Skipping all jobs after this point."; break}
+      set umbrella_dcd [lindex $umbrella_dcds $umbrella_dcds_index] ;# pull out the relevant DCD file name
+      print "Opening dcd file: $umbrella_dcd. index: $umbrella_dcds_index"
+      coorfile open dcd $umbrella_dcd ;# open the file for reading
+      coorfile read ;# read this frame of the new DCD for the next job
+    }
+
+    print "SEEKR: done reading positions for step $i"
   }
   
 
