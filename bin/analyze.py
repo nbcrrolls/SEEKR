@@ -152,8 +152,12 @@ class Milestone():
       #pprint(transition_lines)
     # feed the lines into the Transition object
     for line in transition_lines:
+<<<<<<< HEAD
       new_transition = Transition(line)
       self.transitions.append(new_transition)
+=======
+      self.transitions.append(Transition(line))
+>>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
     return
 
   def get_md_transition_statistics(self, md_time_factor=DEFAULT_MD_TIME_FACTOR):
@@ -161,10 +165,14 @@ class Milestone():
     counts = {} # all the sources and their destinations
     total_counts = {} # keeps track of all counts to any destination
     total_times = {} # the total time of all counts, to be averaged later
+<<<<<<< HEAD
     total_counts_src_dest = {}
     total_times_src_dest = {}
     avg_times = {} # the times to transition out of each source
     avg_times_src_dest = {}
+=======
+    avg_times = {} # the times to transition out of each source
+>>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
     site_index = self.site
     site_name = self.sitename
     for transition in self.transitions:
@@ -186,6 +194,7 @@ class Milestone():
         counts[src_key] = {dest_key:1}
         total_counts[src_key] = 1
         total_times[src_key] = time * md_time_factor
+<<<<<<< HEAD
         
       # EXPERIMENTAL
       src_dest_key = (src_key,dest_key)
@@ -200,6 +209,12 @@ class Milestone():
       avg_times[src_key] = total_times[src_key] / total_counts[src_key]
 
     return counts, total_counts, total_times, avg_times, total_times_src_dest, total_counts_src_dest
+=======
+    for src_key in total_times.keys():
+      avg_times[src_key] = total_times[src_key] / total_counts[src_key]
+
+    return counts, total_counts, total_times, avg_times
+>>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
     
   def get_bd_transition_statistics(self, results_filename=os.path.join("bd","results.xml")):
     'read the BD results.xml file for the anchors to determine transition statistics and times for the BD stage'
@@ -230,7 +245,10 @@ class Transition():
     linelist = linetail.split(',') # split line into a list of elements
     dictlist = map(lambda a: a.strip().split(': '), linelist) # map the line to a list of lists for dictionary conversion
     linedict = dict(dictlist) # convert the list of lists into a dictionary
+<<<<<<< HEAD
     self.id = int(linedict['ID'].strip())
+=======
+>>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
     self.src = int(linedict['source'].strip())
     self.dest = int(linedict['destination'].strip())
     self.cur_step = float(linedict['stepnum'].strip())
@@ -615,7 +633,11 @@ def main():
   model = parse_milestoning_file(milestone_filename)
   #model.make_directories()
   # gather MD data - fill into model
+<<<<<<< HEAD
   counts = {}; total_counts = {}; total_times = {}; avg_times = {}; total_times_src_dest = {}; avg_times_src_dest = {}; total_counts_src_dest = {}; trans = {}
+=======
+  counts = {}; total_counts = {}; total_times = {}; avg_times = {}; trans = {}
+>>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
   end_indeces = []
   for site in model.sites:
     for milestone in site.milestones:
@@ -625,11 +647,17 @@ def main():
       if milestone.md == True and milestone.directory:
         print 'parsing md transitions for:Anchor', milestone.fullname
         milestone.parse_md_transitions()
+<<<<<<< HEAD
         this_counts, this_total_counts, this_total_times, this_avg_times, this_total_times_src_dest, this_total_counts_src_dest = milestone.get_md_transition_statistics(model.md_time_factor) # find the count statistics
         total_counts = add_dictionaries(total_counts, this_total_counts)
         total_times = add_dictionaries(total_times, this_total_times)
         total_counts_src_dest = add_dictionaries(total_counts_src_dest, this_total_counts_src_dest)
         total_times_src_dest = add_dictionaries(total_times_src_dest, this_total_times_src_dest)
+=======
+        this_counts, this_total_counts, this_total_times, this_avg_times = milestone.get_md_transition_statistics(model.md_time_factor) # find the count statistics
+        total_counts = add_dictionaries(total_counts, this_total_counts)
+        total_times = add_dictionaries(total_times, this_total_times)
+>>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
         for src_key in this_counts.keys():
           if src_key in counts.keys():
             counts[src_key] = add_dictionaries(counts[src_key], this_counts[src_key])
@@ -651,9 +679,12 @@ def main():
         
   for src_key in total_times.keys(): # construct the average incubation times
     avg_times[src_key] = total_times[src_key] / total_counts[src_key]
+<<<<<<< HEAD
     
   for src_dest_key in total_times_src_dest.keys():
     avg_times_src_dest[src_dest_key] = total_times_src_dest[src_dest_key] / total_counts_src_dest[src_dest_key]
+=======
+>>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
 
   for src_key in counts.keys():
     temp = {}
@@ -677,9 +708,12 @@ def main():
   for dest_key in b_surface_counts[src_key].keys():
     b_surface_trans[src_key][dest_key] = float(b_surface_counts[src_key][dest_key]) / float(b_surface_total_counts[src_key])
   
+<<<<<<< HEAD
   print "avg_times_src_dest:"
   print avg_times_src_dest
   
+=======
+>>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
   print "bound_dict:", bound_dict
   
   if calc_type == "on": # TODO: these need to be added to the counts matrix somehow for the MC error
@@ -830,7 +864,11 @@ def main():
     print "avg_times dictionary:", avg_times
     print "avg_t vector", avg_t
     print "transitions:"
+<<<<<<< HEAD
     print K
+=======
+    pprint(K)
+>>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
     print "index_dict:"
     pprint(index_dict)
     print "q0"
@@ -883,11 +921,17 @@ def main():
   if calc_type == "off":
     #t_mat_sink = np.matrix(t_mat_sink)
     I = np.matrix(np.identity(n))
+<<<<<<< HEAD
     #aux = np.linalg.solve(I - K.T, avg_t)
     aux = np.linalg.solve(I - K, q0)
     print "aux:", aux
     #mfpt = q0.T.dot(aux)
     mfpt = avg_t.T.dot(aux)
+=======
+    aux = np.linalg.solve(I - K.T, avg_t)
+    print "aux:", aux
+    mfpt = q0.T.dot(aux)
+>>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
     print "MFPT:", mfpt, "fs"
     print "k-off:", 1e15/mfpt, "s^-1"
 

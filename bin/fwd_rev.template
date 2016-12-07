@@ -347,17 +347,19 @@ for {set chunk_id 0} {$chunk_id < $NUM_CHUNKS} {incr chunk_id} {
       
       # ReplicaBarrier? We need to let all the replicas work through the systems that they have before assigning new ones.
       #if { [expr "(($i * $LAUNCHES_PER_CONFIG) + $j) % $FRAME_CHUNK_SIZE"] == 0} { schedule_work } ;# this is designed to prevent memory overload
+
     }
       
     if {$umbrella_dcds_index > [llength $umbrella_dcds]} {set no_more_umb_dcds "True"; print "Requested reversals exceeds DCD file length. Skipping all jobs after this point."; break}
     for {set k 1} {$k < $umbrella_stride} {incr k} { ;# skip ahead by striding through the dcd
       set result [coorfile skip] ;# skip to the next frame for the next job
+
       if {$result == -1} { ;# then we've reached the end of this DCD file
         coorfile close ;# close it
         incr umbrella_dcds_index ;# increment the DCD filename index
         if {$umbrella_dcds_index >= [llength $umbrella_dcds]} {set no_more_umb_dcds "True"; print "Requested reversals exceeds DCD file length. Skipping all jobs after this point."; break}
         set umbrella_dcd [lindex $umbrella_dcds $umbrella_dcds_index] ;# pull out the relevant DCD file name
-       print "Opening dcd file: $umbrella_dcd. index: $umbrella_dcds_index"
+        print "Opening dcd file: $umbrella_dcd. index: $umbrella_dcds_index"
         coorfile open dcd $umbrella_dcd ;# open the file for reading
         coorfile skip ;# skip the first frame of this new DCD file
       }

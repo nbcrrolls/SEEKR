@@ -28,6 +28,8 @@ Priority:
 
 - Change default executable locations (Browndye, APBS, Inputgen, 
 
+- Convergence analysis tools: see whether the umbrella sampling statistics have converged.
+
 
 Recommended:
 

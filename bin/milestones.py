@@ -246,7 +246,11 @@ def generate_concentric_spheres(r,x,y,z,vx,vy,vz,increment, siteid, site_index, 
   milestones.append(milestone)
   return milestones
 
+<<<<<<< HEAD
 def generate_concentric_spheres_atom(r, atomid, x, y, z, vx, vy, vz, increment, siteid, site_index, k_off, startvx = 0.0, startvy = 0.0, startvz = 0.0, absolute='False', r_low=1):
+=======
+def generate_concentric_spheres_atom(r, atomid, x, y, z, vx, vy, vz, increment, siteid, site_index, k_off, startvx = 0.0, startvy = 0.0, startvz = 0.0, absolute='False', r_low=1, radius_list=None):
+>>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
   vector = np.array([vx,vy,vz])
   vector = vector/np.linalg.norm(vector) # normalize the vector
   startvector = np.array([startvx, startvy, startvz]) # the direction in which we go up to the first radius
@@ -254,7 +258,15 @@ def generate_concentric_spheres_atom(r, atomid, x, y, z, vx, vy, vz, increment, 
   if np.linalg.norm(vector) > 0.0: vector = vector/np.linalg.norm(vector) # normalize the vector
   if np.linalg.norm(startvector) > 0.0: startvector = startvector/np.linalg.norm(startvector) # normalize the startvector
   origin = np.array([x,y,z])
+<<<<<<< HEAD
   sphere_radii = np.arange(r_low,r+increment,increment)
+=======
+  if radius_list:
+    sphere_radii=radius_list
+  else:
+    sphere_radii = np.arange(r_low,r+increment,increment)
+  print 'sphere_radii', sphere_radii
+>>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
   lowest_radius = sphere_radii[0] # the lowest radius
   total_spherical_milestones = 0
   spheres_in_site = len(sphere_radii)
