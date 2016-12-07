@@ -42,26 +42,12 @@ If one has a PDB structure with the ligand bound, then finding the binding site 
 Open VMD and load PDB structure 3PTB. Color the protein white and view in a surface representation, then view "resname BEN" in licorice represenation. You should be able to clearly see the benzamidine ligand in the binding site.
 
 
-<<<<<<< HEAD
-Now load the structure 'tryp_wet_lastframe.pdb' from the tutorial folder. Hide the waterbox, showing only the protein in a surface representation. Show residues 171, 172, 173, 193, 196, and 203 in a special color to highlight the binding site of trypsin. These will have different residue numbering than in the crystal structure because of the MD simulation done on 'tryp_wet_lastframe.pdb' previously. If desire, you can overlay the apo structure to the holo crystal structure using the MultiSeq tool in the VMD Extensions menu. I chose them because these are residues that appear to be interacting with the ligand, therefore, we can use the center of mass of these residues as the origin of our binding site.
-=======
 Now load the structure 'tryp_wet_lastframe.pdb' from the tutorial folder. Hide the waterbox, showing only the protein in a surface representation. Show residues 172 173 174 177 191 193 194 196 202 206 197 in a special color to highlight the binding site of trypsin. These will have different residue numbering than in the crystal structure because of the MD simulation done on 'tryp_wet_lastframe.pdb' previously. If desire, you can overlay the apo structure to the holo crystal structure using the MultiSeq tool in the VMD Extensions menu. I chose them because these are residues that appear to be interacting with the ligand, therefore, we can use the center of mass of these residues as the origin of our binding site.
->>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
-
 
 Within the site1 block, set 'anchor_function' to 'concentric_spheres_atom'. This option means that our milestones will be concentric spheres centered around an atom selection.
 set 'r' to '14.0'. This means that the largest spherical milestone will extend with a radius of 14 Angstroms.
 set 'r_low' to '2.0'. This is the radius of the innermost milestone in Angstroms.
 
-<<<<<<< HEAD
-In VMD, make the 'tryp_wet_lastframe.pdb' file be the top molecule. In the tkconsole window, type: 'set site [atomselect top "name CA and resid 171 172 173 193 196 203"]'
-Then type: 'measure center $site'
-Take note of the resulting coordinates. They should be approximately: "28.992 31.857 27.063"
-
-Set 'x' to be '28.992'. Set 'y' to be '31.857'. Set 'z' to be '27.063'.
-
-Now, in the tkconsole window, type: '$site get serial'. The following numbers should be returned: '2475 2487 2498 2756 2798 2909'. Make these numbers the values for the 'atomid' parameter.
-=======
 ALternatively, you can manually specify
 
 In VMD, make the 'tryp_wet_lastframe.pdb' file be the top molecule. In the tkconsole window, type: 'set site [atomselect top "name CA and resid 172 173 174 177 191 193 194 196 202 206 197"]'
@@ -71,7 +57,6 @@ Take note of the resulting coordinates. They should be approximately: "-1.536, 1
 Set 'x' to be '.1.536'. Set 'y' to be '13.860'. Set 'z' to be '16.540'.
 
 Now, in the tkconsole window, type: '$site get serial'. The following numbers should be returned: '2479 2490 2500 2536 2719 2746 2770 2788 2795 2868 2927'. Make these numbers the values for the 'atomid' parameter.
->>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
 
 Now we need to choose where the milestones to place the ligand.
 
@@ -79,11 +64,7 @@ In the Amarolab wiki, on the scripts page, there should be a script called 'modu
 
 Alternatively, in the VMD website, there is a page that contains all the scripts (http://www.ks.uiuc.edu/Research/vmd/script_library/). Download the script called 'eye_line', though some modifications will be needed to make it return the vector from the atom selection to your eye.
 
-<<<<<<< HEAD
-In my case, I rescaled my vector to have a length of five Angstroms, and it was '0.942 4.845 -0.900'
-=======
 In my case, it was '19.335, 117.924, 79.150'
->>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
 
 Set the 'vx', 'vy', 'vz' values to be the values you obtained. Or you can use my values on the line above.
 
@@ -91,12 +72,9 @@ The parameters 'startvx', 'startvy', and 'startvz' allow more control over how t
 
 Set the 'increment' value to be '2.0'. This is the spacing, in Angstroms, between the milestones.
 
-<<<<<<< HEAD
-=======
 Alternatively, you can manually specify the placement of milestones using the
 radius list option and provide a string of distances (e.g. 1 2 3 4 6 8 )
 
->>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
 We have finished defining the binding site of Trypsin, now we are filling out details of the MD portion of the calculation
 Set 'hedron' to 'single'. This is a future feature concerning rotational milestones.
 Set 'reject_clashes' to 'True'. This will ensure that there are no steric clashes when the holo structure is generated for each milestone. If there is a steric clash, then no directory will be generated for that milestone, although it will still be monitored for crossing events.
@@ -106,14 +84,6 @@ Now we need to fill out the LEAP commands. You can do this by hand by entering v
 We will do the former. Write the following into the file:
 
 leap_preload_commands [
-<<<<<<< HEAD
-        source leaprc.ff14SB,
-        source leaprc.gaff,
-        loadoff /path/to/tutorial/Ca2.lib,
-        loadoff /path/to/tutorial/benzamidine.lib,
-        loadamberparams /path/to/tutorial/benzamidine.frcmod
-      ]
-=======
   source leaprc.ff14SB,
         source leaprc.gaff,
         set default FlexibleWater on,
@@ -129,36 +99,22 @@ leap_preload_commands [
   ]
 
 
->>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
 
 Of course change /path/to/tutorial to the true path to the tutorial files...
 
 And write the following also:
       
 leap_postload_commands [
-<<<<<<< HEAD
-        bond mol.7.SG mol.137.SG,
-        bond mol.25.SG mol.41.SG,
-        bond mol.109.SG mol.210.SG,
-        bond mol.116.SG mol.183.SG,
-        bond mol.148.SG mol.162.SG,
-        bond mol.173.SG mol.197.SG,
-=======
         bond holo.7.SG holo.137.SG,
         bond holo.25.SG holo.41.SG,
         bond holo.109.SG holo.210.SG,
         bond holo.116.SG holo.183.SG,
         bond holo.148.SG holo.162.SG,
         bond holo.173.SG holo.197.SG,
->>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
         charge holo,
         check holo,
       ]
 
-<<<<<<< HEAD
-Notice that I have to EXPLICITLY put the disulfide bonds into the leap script. Remember to do this for your molecule and save yourself some heartache.
-=======
->>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
 
 Set 'leap_program' to 'tleap'
 
@@ -282,11 +238,6 @@ Once that command is done, use scp or sftp to transfer to your scratch directory
 
 tar -xzf tryp_pre_equil.tgz
 
-<<<<<<< HEAD
-The program that we use to control jobs on the supercomputer is called control.py. Make sure that control.py exists in your home directory on Stampede.
-
-Now, cd into the directory you just unpacked on Stampede. I like to test everything by running a short simulation for one of the anchors to ensure that it was prepared properly.
-=======
 Calculations in this section are typically performed on a supercomputer. This
 tutorial assumes you will be running on the stampede supercomputer.
 
@@ -390,20 +341,15 @@ export MPIEXEC="/path/to/mpiexec"
 Running Ensemble Equilibrations:
 
 Now, cd into the project directory you just unpacked on Stampede. I like to test everything by running a short simulation for one of the anchors to ensure that it was prepared properly.
->>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
 
 To prepare the anchor files for umbrella sampling, determine the lowest anchor number (in this case, it's four), type the following command:
 
 python ~/control.py submit 4 ens_equil 
 
-<<<<<<< HEAD
-Even though the output says that it's executing an sbatch command, it actually is not. We will have to do that later manually.
-=======
 Even though the output says that it's executing an sbatch command, it actually is not beacuse Stampede does not allow this. It is always a good idea to check that it did not submit, though, by typing 
 "showq -u"
 
 We will have to submit it manually later.
->>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
 
 The control.py program takes commands according to the following template:
 
@@ -425,9 +371,6 @@ Open the submission file using vim or vi.
 
 Change the amount of time to run from 48 hours to only 10 minutes. You can do this by finding an SBATCH argument near the top of the file specified by "-t" and contains the text: "48:00:00". Change this text to "00:10:00", which corresponds to ten minutes. (This can also be done with the '-t' argument to control.py)
 
-<<<<<<< HEAD
-You can also change other information about the submission at this time if you desire. You can also change the NAMD file if desired, although SEEKR should have specified everything properly.** SEEKR DOESN'T SPECIFY IT PROPERLY, NEEDS EDITING.** Now submit the umbrella sampling job:
-=======
 Change the number of processors from 256 to 128. This can also be done using the -p argument in control.py
 
 Finally, you will need to add your account information after the -A option.
@@ -436,7 +379,6 @@ This can also be done using the -a argument in control.py
 You can also change other information about the submission at this time if you desire. You can also change the NAMD file if desired, although SEEKR should have specified everything properly.
 
  Now submit the umbrella sampling job:
->>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
 
 sbatch ens_equil256_1.submit
 
@@ -455,10 +397,6 @@ python ~/control.py check all ens_equil
 This will print out a series of information about each of the anchors, and the number of timesteps that have been completed for the umbrella sampling. If the "last timestep" output is less than the number of timesteps wanted for the umbrella sampling, you would use a command similar to the following:
 
 python ~/control.py resubmit 4 ens_equil
-<<<<<<< HEAD
-** This didn't work for Sasha. Error: wrong printed ens_equil .namd name. Check resubmit in control.py **
-=======
->>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
 
 Of course, you might use a different anchor index. You will need to enter the ens_equil/ directory again, find the submission file named something like: "ens_equil256_2.submit", modify any parameters, and then submit it using sbatch.
 
@@ -472,89 +410,13 @@ Obtain the milestoning.tcl file from the SEEKR directory and place it into the t
 
 Then, you will need to obtain or compile a special build of NAMD2 as well as a program called Charm++.
 
-<<<<<<< HEAD
-How to obtain NAMD already build for Stampede:
-Go to your own home directory in Stampede. From Sasha's home directory, copy over the following folder using this command:
-
-cp -r /home1/02520/heyneman/namd_lv ./
-
-
-How to compile for Stampede:
-Obtain the NAMD source code by going to your home directory, create a directory named, say, namd_compile. Then 'cd' into it. From here, run:
-
-cp /home1/02520/heyneman/namd_compile/NAMD_CVS-2015-11-02_Source.tar.gz
-
-Then unpack it with tar -xzf NAMD_CVS-2015-11-02_Source.tar.gz
-
-Now you will copy some code files from the same folder into your source folder using these commands:
-
-cp /home1/02520/heyneman/namd_compile/gauss.C NAMD_CVS-2015-11-02_Source/src/
-cp /home1/02520/heyneman/namd_compile/eigeng.c NAMD_CVS-2015-11-02_Source/src/
-cp /home1/02520/heyneman/namd_compile/TclCommands.C NAMD_CVS-2015-11-02_Source/src/
-cp /home1/02520/heyneman/namd_compile/TclVec.C NAMD_CVS-2015-11-02_Source/src/
-
-This will overwrite the existing TclVec.C and TclCommands.C source files because SEEKR requires adaptations of the NAMD code. Trust us... we know what we're doing ;)
-
-Next, copy over the script that you will use to build charmrun, which NAMD needs to run on a parallel system like Stampede. Do so using this command:
-
-cp /home1/02520/heyneman/namd_compile/build_namd.bash ./
-
-View the script if you want, and modify the variables at the top as you see fit. The $WORKDIR variable is where the program is downloaded and compiled. Then the $HOMEDIR variable is actually where the final program will be placed. Run using this command:
-
-bash build_namd.bash
-
-This script will probably run for a long time (about an hour). In fact, if it stops instantly, check the output for errors because it probably didn't work, even if it says it worked. If you have trouble, try copying the charm-6.7.0 tarball from Sasha's directory:
-
-cp /home1/02520/heyneman/namd_compile/charm-6.7.0.tar $WORK/charm-6.7.0-verbs-linux-x86_64-iccstatic
-
-Then run this command:
-
-tar -xf $WORK/charm-6.7.0-verbs-linux-x86_64-iccstatic/charm-6.7.0.tar
-
-Then go into the build_namd.bash script and remove or comment out the line that begins with 'wget'. Then re-run the script.
-
-Now we need to compile NAMD. The default way to do this is pretty well described in the notes.txt file in the NAMD directory. But we will give detailed instructions here.
-
-The following commands download and install TCL and FFTW libraries:
-  (cd to NAMD_2.10_Source if you're not already there)
-  wget http://www.ks.uiuc.edu/Research/namd/libraries/fftw-linux-x86_64.tar.gz
-  tar xzf fftw-linux-x86_64.tar.gz
-  mv linux-x86_64 fftw
-  wget http://www.ks.uiuc.edu/Research/namd/libraries/tcl8.5.9-linux-x86_64.tar.gz
-  wget http://www.ks.uiuc.edu/Research/namd/libraries/tcl8.5.9-linux-x86_64-threaded.tar.gz
-  tar xzf tcl8.5.9-linux-x86_64.tar.gz
-  tar xzf tcl8.5.9-linux-x86_64-threaded.tar.gz
-  mv tcl8.5.9-linux-x86_64 tcl
-  mv tcl8.5.9-linux-x86_64-threaded tcl-threaded
-
-Edit the Make.charm configuration file:
-  vi Make.charm  
-  
-Once inside, set CHARMBASE to full path to charm. In our case, this is the directory: ${HOME}/charm-6.7.0
-
-CHARMBASE = ${HOME}/charm-6.7.0
-
-Set up build directory and compile:
-  ./config Linux-x86_64-g++ --charm-arch verbs-linux-x86_64-iccstatic
-  cd Linux-x86_64-g++
-  make
-
-This last step is likely to take a long time. (about 15 minutes). 
-
-Take note of the current directory. This is where the namd2 and charmrun programs are that we will need to reference later. /home1/02520/heyneman/namd_compile/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++
-
-=======
->>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
 Submitting the fwd_rev stage:
 
 Since earlier in the tutorial, you probably only ran the umbrella sampling simulations for 10 minutes, which is far shorter than you actually would. For this reason, you don't have the whole umbrella sampling simulation. You can run these for the required time, but you should probably obtain the completed trajectories that we have already prepared. However, these must be carefully placed in their appropriate directories with the appropriate names.
 
 You will need access to an AmaroLab computer like Honolua for this commands. Log into an 
 
-<<<<<<< HEAD
-=======
 ###Fix file location###
->>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
 scp /extra/banzai/alheynem/seekr/tryp_dcds/tryp_ens_equil_trajectories.tgz your_username_here@stampede.tacc.utexas.edu:/scratch/directory/on/stampede
 
 Of course, replace /scratch/directory/on/stampede with the true path (Log into Stampede and type: "echo $SCRATCH" to see a path to this), along with your_username_here replaced with your Stampede username.
@@ -605,45 +467,20 @@ Copy the mpiexec program from Sasha's directory to a location of your choice. Yo
 
 cp /home1/02520/heyneman/namd_lv/mpiexec $HOME
 
-<<<<<<< HEAD
-Now, you will need to put a copy of control.py, a program in the SEEKR package, onto Stampede somewhere. You could probably do this by making another SEEKR git clone in your home directory of Stampede.
-
-Use the program vi or similar text editing program to modify the control.py script itself. About 60 lines down, there are two variables named 'namd_special' and 'charm_special'. Change these variables to the path you remember from the compile section above that contain the namd2 and charmrun programs. Also change the 'mpi_exec' variable to point to the location to where you copied the program 'mpiexec'.
-
-Make sure the 'milestoning.tcl' file is located in this folder. It can be found in the main SEEKR script directory.
-**Clarify WHICH folder.
-**.xml, not .tcl?
-=======
->>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
-
 Now, it's time to submit the forward-reverse stage job. Run the following command using control.py:
 **From the trypsin_project_directory
 
-<<<<<<< HEAD
-python /path/to/control.py -p 64 -nr 8 -t 12:00:00 submit all fwd_rev
-=======
 python /path/to/control.py -p 64 -nr 16 -t 12:00:00 submit all fwd_rev
->>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
 
 Of course, replace /path/to/control.py with the path to the control.py SEEKR program. The '-p' option will request 64 processors. If you find that you can perform calculations more efficiently with a different number of processors, you can change this number. The '-nr' option defines the number of replicas, that is, the number of concurrent fwd-rev stage jobs running at once. The number of processors per replica is equal to (number of processors / number of replicas). The '-t' option specifies the amount of time to run in hours:minutes:seconds. Run control.py with the '-h' option to see additional arguments that are available.
 
 Change directory into one of the anchors, say anchor 4. Go through the 'md' and 'fwd_rev' directories. From here, you can view the '.namd' and '.submit' files to see how the fwd-rev stage is run. There is a lot of special code in the '.namd' files that helps in the assignment of simulations to replicas, as well as switching between reverse and forward stages, starting up where jobs are left off etc.
 
-<<<<<<< HEAD
-(NOTE to Sasha and Ben: Let me take a look at the input before you launch. Also, probably only one set of this data should be created. Maybe only one of you guys should actually run the full calculation, or maybe you guys can split the anchors between you both or something.)
-
-=======
->>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
 Submit the jobs using the following command:
 
 sbatch fwd_rev64_1.submit
 
-<<<<<<< HEAD
-The job will run for up to 48 hours. You can check on the job the same way using the 'showq -u' or 'qstat' commands.
-** Won't it only run 12 hours?
-=======
 The job will run for up to 12 hours. You can check on the job the same way using the 'showq -u' or 'qstat' commands.
->>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
 
 ============= BD STAGE: =============
 
@@ -709,18 +546,4 @@ When complete, it will print out a k-on and other useful information.
 To see the free energy profile, run the following command:
 
 python ~/seekr/analyze_brj.py --free_energy -m milestones.xml -b 0 --skip 100 --number 1000
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

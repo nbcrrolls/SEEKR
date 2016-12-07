@@ -24,15 +24,10 @@ Instructions
 
 SEEKR is designed to be run on Linux. Obtain SEEKR by cloning the Git repository on github
 
-<<<<<<< HEAD
-git clone https://github.com/lvotapka/seekr.git
 
-Or, go to the URL https://github.com/lvotapka/seekr and click the "Clone or download" button and save to a place in your computer.
-=======
 git clone https://github.com/nbcrrolls/SEEKR.git
 
 Or, go to the URL https://github.com/nbcrrolls/SEEKR and click the "Clone or download" button and save to a place in your computer.
->>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
 
 From there, open seekr/doc/manual.txt to get started.
 
@@ -52,10 +47,6 @@ Getting Help
 
 Need help? Check out the documentation at http://amarolab.ucsd.edu/seekr/ or that is located in seekr/doc/manual.txt
 
-<<<<<<< HEAD
-Also, you can make comments, submit issues, and talk to real people at the Github site: http://github.com/lvotapka/seekr
-=======
 Also, you can make comments, submit issues, and talk to real people at the Github site: https://github.com/nbcrrolls/SEEKR.git
->>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
 
 

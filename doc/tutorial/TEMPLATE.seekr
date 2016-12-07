@@ -19,8 +19,6 @@ number_of_ens_equil_frames_skipped SOMETHING # how many dcd frames to skip at th
 extract_stride SOMETHING
 
 ##############################################################
-<<<<<<< HEAD
-=======
 #Program path information
 ##############################################################
 browndye_bin_dir SOMETHING # the path to the browndye bin
@@ -28,7 +26,6 @@ inputgen_location SOMETHING
 apbs_executable SOMETHING
 
 ##############################################################
->>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
 # ligand/receptor information
 ##############################################################
 lig_pdb_filename SOMETHING
@@ -136,11 +133,8 @@ bd_threads SOMETHING
 bd_prods_per_anchor SOMETHING
 #bd_calc_electrostatics SOMETHING
 bd_rec_pqr_filename SOMETHING
-<<<<<<< HEAD
 
-=======
 inputgen_executable SOMETHING
->>>>>>> c679335c6e41b9201614e71aa34d91a03e8e23a3
 ##############################################################
 # APBS Parameters
 ##############################################################
