@@ -49,7 +49,7 @@ DEFAULT_SHAPE = "sphere"
 GRID_TRANSITION = "SEEKR: GRID TRANSITION: "
 GRID_TRANSITION_COMPILE = re.compile(GRID_TRANSITION)
 
-FORWARD_OUTPUT_GLOB = "fwd_revALL.out.*" # used to find all the forward phase simulation output
+FORWARD_OUTPUT_GLOB = "fwd_rev*.out.*" # used to find all the forward phase simulation output
 
 def boolean(arg):
   if str(arg).lower() in ("false","", "0", "0.0", "[]", "()", "{}"):
