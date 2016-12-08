@@ -48,9 +48,8 @@ DEFAULT_SHAPE = "sphere"
 #GRID_TRANSITION = re.compile("GRID TRANSITION")
 GRID_TRANSITION = "SEEKR: GRID TRANSITION: "
 GRID_TRANSITION_COMPILE = re.compile(GRID_TRANSITION)
-verbose = True
 
-FORWARD_OUTPUT_GLOB = "fwd_rev*.out.*" # used to find all the forward phase simulation output
+FORWARD_OUTPUT_GLOB = "fwd_revALL.out.*" # used to find all the forward phase simulation output
 
 def boolean(arg):
   if str(arg).lower() in ("false","", "0", "0.0", "[]", "()", "{}"):
@@ -202,8 +201,8 @@ class Milestone():
     for dest_key in counts[src_key].keys():
       total_counts[src_key] += counts[src_key][dest_key]
     if total_times[src_key] == None:
-      avg_times[src_key] = 1.0
-      total_times[src_key] = 1.0
+      avg_times[src_key] = 0.0
+      total_times[src_key] = 0.0
     else:
       avg_times[src_key] = total_times[src_key] / total_counts[src_key]
     
@@ -470,7 +469,7 @@ def count_mat_to_rate_mat(N, avg_t):
 
   return Q, sum_vector
 
-def rate_mat_to_prob_mat(Q):
+def rate_mat_to_prob_mat(Q, calc_type='on'):
   ''' converts a rate matrix Q into probability matrix (kernel) K and an incubation time vector'''
   n = Q.shape[0]
   P = np.matrix(np.zeros((n,n)))
@@ -495,7 +494,10 @@ def rate_mat_to_prob_mat(Q):
     if sum_vector[i] != 0.0:
       avg_t[i] = 1.0 / sum_vector[i]
     else: # then the sum vector goes to zero, make the state go to itself
-      K[i,i] = 1.0
+      if calc_type == "on":
+        K[i,i] = 1.0
+      elif calc_type == "off":
+        K[i,i] = 0.0
       #avg_t[i] = something???
 
   return K, avg_t
@@ -556,6 +558,25 @@ def get_beta_from_K_q0(K, q0, bound_indices):
     beta += q_inf[bound_index, 0]
   return beta
 
+def make_free_energy_profile_boundaries(K, bound_indices, inf_index):
+  n = K.shape[0]
+  for bound_index in bound_indices:
+    K[bound_index,bound_index] = 0.0001
+  
+  for i in range(n):
+    col_sum = 0.0
+    
+    for j in range(n):
+      if j == inf_index:
+        K[j, i] = 0.0
+      col_sum += K[j, i]
+    
+    if col_sum > 0.0:
+      K[:,i] /= col_sum
+    
+  return K
+  
+
 def main():
   parser = argparse.ArgumentParser(description='Analyzes SEEKR forward phase output to construct milestoning calculations on simulation analysis.')
   #parser.add_argument('-s', '--sinkrad', dest="sinkrad", nargs=1, help="Sink radius for the Markov Model", action=Once) # make sure this is only specified once, cause its easy to mix this one up with '--skip'
@@ -571,11 +592,17 @@ def main():
   parser.add_argument('--test', dest="test", help="Run the unittests", action="store_true")
   parser.add_argument('--skip', dest='error_skip', type=int, default=1, help="define how many matrix samples to skip when doing MC error estimation" )
   parser.add_argument('--number', dest='error_number', type=int, default=1000, help="define how many matrices to sample for MC error estimation" )
+  parser.add_argument('-v','--verbose', dest="verbose", help="verbose output", action="store_true")
 
   args = parser.parse_args()
   args = vars(args) # convert to a dictionary
   print "args:", args
   milestone_filename = args['milestones'] # parse the milestoning XML file
+  verbose = False
+  if args['verbose']:
+    print "verbose mode activated."
+    verbose = True
+    
   if args['test']: # if we are just going to run the unittests, then run and exit
     print "running Unittests..."
     runner = unittest.TextTestRunner()
@@ -660,7 +687,8 @@ def main():
   for dest_key in b_surface_counts[src_key].keys():
     b_surface_trans[src_key][dest_key] = float(b_surface_counts[src_key][dest_key]) / float(b_surface_total_counts[src_key])
   
-  print "bound_dict:", bound_dict
+  
+  radius_dict = {}
   
   if calc_type == "on": # TODO: these need to be added to the counts matrix somehow for the MC error
     trans['inf'] = {'inf':1.0}
@@ -669,24 +697,27 @@ def main():
     found_sink = False
     for site in model.sites:
       for milestone in site.milestones:
+        key = "%s_%s" % (site.name, milestone.index)
         if site.name in bound_dict.keys():
           if milestone.index in bound_dict[site.name]: # then make it the bound state by altering the transition properties.
-            key = "%s_%s" % (site.name, milestone.index)
             bound_keys.append(key)
             trans[key] = {key:1.0}
             counts[key] = {key:1e99}
             avg_times[key] = 1.0
             found_sink = True
-            print "setting site: %s to be the sink state" % key
+            if verbose: print "setting site: %s to be the sink state" % key
         if 'all' in bound_dict.keys():
           if milestone.index in bound_dict['all']:
-            key = "%s_%s" % (site.name, milestone.index)
+            #key = "%s_%s" % (site.name, milestone.index)
             bound_keys.append(key)
             trans[key] = {key:1.0}
             counts[key] = {key:1e99}
             avg_times[key] = 1.0
             found_sink = True
-            print "setting site: %s to be the sink state" % key
+            if verbose: print "setting site: %s to be the sink state" % key
+        
+        if milestone.shape == "sphere":
+          radius_dict[key] = milestone.radius
       
     assert found_sink, "Alert: no bound state found matching criteria: %s. Make sure that the site names and milestone indices match." % args['bound_states']
   elif calc_type == "off":
@@ -695,13 +726,6 @@ def main():
     # TODO: fill out more here
     avg_times['inf'] = 0.0
     
-    # TODO: remove this hardcode
-    #trans['site1_0'] = {'site1_1':1.0}
-    #counts['site1_0'] = {'site1_1':1e9}
-    #avg_times['site1_0'] = 1e11
-    
-    #avg_times['site1_6'] = 1e8
-    
   elif calc_type == "free_energy": # then the user wants a free energy profile
     trans['inf'] = {'inf':0.0}
     counts['inf'] = {'inf':0}
@@ -709,19 +733,20 @@ def main():
     found_sink = False
     for site in model.sites:
       for milestone in site.milestones:
+        key = "%s_%s" % (site.name, milestone.index)
         if site.name in bound_dict.keys():
-          key = "%s_%s" % (site.name, milestone.index)
+          
           if 'inf' in trans[key].keys(): # we don't want anything transitioning to the infinite state
             trans[key]['inf'] = 0.0
+          bound_keys.append(key)
+          
+        if 'all' in bound_dict.keys():
+          if milestone.index in bound_dict['all']:
+            #key = "%s_%s" % (site.name, milestone.index)
+            bound_keys.append(key)
             
-    # TODO: remove this hardcode
-    #trans['site1_0'] = {'site1_0':0.5, 'site1_1':0.5}
-    #counts['site1_0'] = {'site1_0':1e9, 'site1_1':1e9}
-    #avg_times['site1_0'] = 1e0
-    
-    #trans['inf'] = {'site1_6':1.0}
-    #counts['inf'] = {'site1_6':1e9}
-    #avg_times['inf'] = 1e0
+        if milestone.shape == "sphere":
+          radius_dict[key] = milestone.radius
     
     '''
     found_sink = False
@@ -747,14 +772,25 @@ def main():
             print "setting site: %s to be the sink state" % key
     assert found_sink, "Alert: no bound state found matching criteria: %s. Make sure that the site names and milestone indices match." % args['bound_states']
   '''
-  print "trans:"
-  print trans
+  if verbose:
+    print "bound_dict:", bound_dict
+    print "trans:"
+    print trans
+  
+    print "radius_dict:"
+    print radius_dict
   
   #avg_t = np.zeros((n,1))
   K, index_dict = trans_dict_to_matrix(trans)
   n,m = K.shape
   N, N_index_dict = trans_dict_to_matrix(counts)
   avg_t = avg_t_vector(avg_times, index_dict)
+  inf_index = None
+  for key in index_dict.keys():
+    if index_dict[key] == 'inf':
+      assert inf_index == None, "cannot have more than one infinite state."
+      inf_index = key
+  
   if verbose:
     print "n:", n, "m:", m
     print "K:", K
@@ -763,6 +799,7 @@ def main():
     print N
     print "N_index_dict:", N_index_dict
     print "counts:", counts
+    print "inf_index:", inf_index
   
   # Now sampling MC matrices
   print "Now sampling rate matrices for MC error estimation."
@@ -789,7 +826,7 @@ def main():
                 break
             q0[i,0] = 1.0
             site_count += 1.0
-            print "setting site: %s to be a starting state" % key
+            if verbose: print "setting site: %s to be a starting state" % key
             
         if 'all' in bound_dict.keys():
           if milestone.index in bound_dict['all']:
@@ -799,7 +836,7 @@ def main():
                 break
             q0[i,0] = 1.0
             site_count += 1.0
-            print "setting site: %s to be a starting state" % key
+            if verbose: print "setting site: %s to be a starting state" % key
     q0 = q0 / site_count # normalize
   
     
@@ -864,10 +901,19 @@ def main():
     #t_mat_sink = np.matrix(t_mat_sink)
     I = np.matrix(np.identity(n))
     aux = np.linalg.solve(I - K.T, avg_t)
-    print "aux:", aux
+    if verbose: print "aux:", aux
     mfpt = q0.T.dot(aux)
-    print "MFPT:", mfpt, "fs"
-    print "k-off:", 1e15/mfpt, "s^-1"
+    koffs = []
+    mfpts = []
+    for Q in Q_mats:
+      new_K, new_avg_t = rate_mat_to_prob_mat(Q, calc_type)
+      new_mfpt = q0.T.dot(np.linalg.solve(I - new_K.T, new_avg_t))
+      mfpts.append(new_mfpt)
+      koffs.append(1e15/new_mfpt)
+    
+    #print "np.mean(koffs):", np.mean(koffs)
+    print "MFPT:", mfpt, "+/-", np.std(mfpts), "fs"
+    print "k-off:", 1e15/mfpt, "+/-", np.std(koffs), "s^-1"
 
   '''
   # now calculate flux quantity
@@ -890,47 +936,46 @@ def main():
   if calc_type == 'free_energy':
     pstat = np.matrix(np.zeros((n, 1)))
     delta_G = np.matrix(np.zeros((n,1)))
+    
+    K = make_free_energy_profile_boundaries(K, bound_indices, inf_index)
     K_inf = np.matrix(K) ** 99999999
-    print "K_inf:", K_inf
     qstat = np.dot(K_inf,q0)
-    print "qstat:", qstat
+    
     #print "model.temperature:", model.temperature
     #print "type(model.temperature):", type(model.temperature)
     for i in range(n):
       pstat[i,0] = qstat[i,0] * avg_t[i,0]
       
-    print "pstat:", pstat
-    # TODO: remove this hardcode
-    pstat_ref = pstat[6,0]
-    for i in range(n):
-      delta_G[i,0] = -model.temperature * R_GAS_CONSTANT * log(pstat[i,0] / pstat_ref) # in kcal/mol
     
-    print "delta_G:", delta_G
+    # TODO: change this hardcode to be a more general bound-state index instead of "1"
+    pstat_ref = pstat[1,0]
+    for i in range(n):
+      if pstat[i,0] == 0.0:
+        delta_G[i,0] = 1e99
+      else:
+        delta_G[i,0] = -model.temperature * R_GAS_CONSTANT * log(pstat[i,0] / pstat_ref) # in kcal/mol
+    
+    
     pstats = []
     delta_Gs = []
     for Q in Q_mats:
-      #print "Q:", Q
       new_K, new_avg_t = rate_mat_to_prob_mat(Q)
       
-      # TODO: remove hardcode below
-      new_K[2,1] = 0.5
-      new_K[1,1] = 0.5
-      
+      new_K = make_free_energy_profile_boundaries(new_K, bound_indices, inf_index)
       new_pstat = np.matrix(np.zeros((n, 1)))
       new_delta_G = np.matrix(np.zeros((n, 1)))
       new_K_inf = np.matrix(new_K) ** 99999999
       new_qstat = np.dot(new_K_inf,q0)
       
-      #print "new_K:"
-      #print new_K
-      #exit()
-      
       for i in range(n):
         new_pstat[i,0] = new_qstat[i,0] * new_avg_t[i]
       pstats.append(new_pstat)
+      
       for i in range(n):
-        # TODO: remove this hardcode
-        new_delta_G[i,0] = -model.temperature * R_GAS_CONSTANT * log(new_pstat[i,0] / pstat_ref) # in kcal/mol
+        if new_pstat[i,0] == 0.0:
+          new_delta_G[i,0] = 1e99
+        else:
+          new_delta_G[i,0] = -model.temperature * R_GAS_CONSTANT * log(new_pstat[i,0] / pstat_ref) # in kcal/mol
       delta_Gs.append(new_delta_G)
          
     pstat_std = np.matrix(np.zeros((n, 1)))
@@ -940,13 +985,31 @@ def main():
       delta_G_std_i = []
       for pstat in pstats:
         pstat_std_i.append(pstat[i,0])
-      for delta_G in delta_Gs:
-        delta_G_std_i.append(delta_G[i,0])
+      for mc_delta_G in delta_Gs:
+        delta_G_std_i.append(mc_delta_G[i,0])
         
       pstat_std[i,0] = np.std(pstat_std_i)
       delta_G_std[i,0] = np.std(delta_G_std_i)
-    print "pstat_std:", pstat_std
-    print "delta_G_std:", delta_G_std
+    
+    if verbose:
+      print "K:"
+      pprint(K)
+      print "K_inf:"
+      pprint(K_inf)
+      print "qstat:", qstat
+      print "pstat:", pstat
+      print "delta_G:", delta_G
+      print "pstat_std:", pstat_std
+      print "delta_G_std:", delta_G_std
+    
+    print "Free energy profile (kcals/mol):"
+    print "radius:\tdelta G\t+/-"
+    for i in range(n):
+      radius = "???"
+      if index_dict[i] in radius_dict.keys():
+        radius = radius_dict[index_dict[i]]
+      if delta_G[i,0] >= 1e99: continue # don't print huge numbers
+      print '%s\t%2.3f\t%2.3f' % (radius, delta_G[i,0], delta_G_std[i,0])
 
   # ideas for analyze.py:
   # - lots of information in the milestones.xml file: directories, temperature, (check)
