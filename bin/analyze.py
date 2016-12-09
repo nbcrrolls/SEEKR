@@ -3,20 +3,9 @@
 '''
 analyze.py
 
-analyzes forward phase output to construct markov model for simulation analysis
+analyzes forward stage output to construct markov model for simulation analysis
 
-Necessary arguments:
-
-- MD & BD States that represent sink states
-- Files that contain the transition information. Could be a grepped file or pure NAMD output.
-
-NOTE: based on the "milestone_analyze.py" script in ~/scripts/
 analyze -- combines the statistics generated from MD and BD milestoning to estimate kinetic rates
-
-analyze is a program designed to be the heir to the 'markov.py' and 'k_off.py' programs; to replace the functions of both, and be a cleaner, more extended alternative to both of them.
-
-
-It defines classes_and_methods
 
 @author:     Lane Votapka
 
