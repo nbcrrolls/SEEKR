@@ -177,7 +177,7 @@ class Milestone():
 
     return counts, total_counts, total_times, avg_times
     
-  def get_bd_transition_statistics(self, results_filename=os.path.join("bd","results.xml")):
+  def get_bd_transition_statistics(self, results_filename=os.path.join("bd","results.xml"), bd_time=0.0):
     'read the BD results.xml file for the anchors to determine transition statistics and times for the BD stage'
     bd_results_filename = os.path.join(self.directory, results_filename)
     counts = {}
@@ -190,8 +190,8 @@ class Milestone():
     for dest_key in counts[src_key].keys():
       total_counts[src_key] += counts[src_key][dest_key]
     if total_times[src_key] == None:
-      avg_times[src_key] = 0.0
-      total_times[src_key] = 0.0
+      avg_times[src_key] = bd_time
+      total_times[src_key] = bd_time
     else:
       avg_times[src_key] = total_times[src_key] / total_counts[src_key]
     
@@ -599,15 +599,18 @@ def main():
     runner.run(itersuite)
   assert milestone_filename, "A milestones XML file must be provided"
   # figure out whether we are doing a k-on, k-off, or free energy profile calculation
+  bd_time = 0.0 # something to allow the calculations to work
   if args['off']:
     print "Running k-off calculations."
     calc_type = "off"
+    
   elif args['free_energy']:
     print "Running free energy profile calculations."
     calc_type = "free_energy"
   else:
     print "Running k-on calculations."
     calc_type = "on" # by default
+    bd_time = 1.0
     
   error_skip = args['error_skip']
   error_number = args['error_number']
@@ -642,7 +645,7 @@ def main():
         end_indeces.append('%d_%d' % (milestone.site, int(milestone.index)))
         
       if milestone.bd == True and milestone.directory:
-        this_counts, this_total_counts, this_total_times, this_avg_times = milestone.get_bd_transition_statistics()
+        this_counts, this_total_counts, this_total_times, this_avg_times = milestone.get_bd_transition_statistics(bd_time=bd_time)
         total_counts = add_dictionaries(total_counts, this_total_counts)
         total_times = add_dictionaries(total_times, this_total_times)
         for src_key in this_counts.keys():
@@ -668,7 +671,7 @@ def main():
   
   
   # b-surface milestone
-  b_surface_counts, b_surface_total_counts, b_surface_total_times, b_surface_avg_times = model.b_surface_milestone.get_bd_transition_statistics("results.xml")
+  b_surface_counts, b_surface_total_counts, b_surface_total_times, b_surface_avg_times = model.b_surface_milestone.get_bd_transition_statistics("results.xml", bd_time=bd_time)
   src_key = b_surface_counts.keys()[0]
   b_surface_trans = {src_key:{}}
   bound_indices = []
@@ -855,7 +858,7 @@ def main():
       
     beta_std = np.std(betas)
     #print "len(betas):", len(betas)
-    #print "np.mean(betas):", np.mean(betas), "np.std(betas)", np.std(betas)
+    print "np.mean(betas):", np.mean(betas), "np.std(betas)", np.std(betas)
 
     print "beta:", beta, "+/-", beta_std
     k_b = run_compute_rate_constant(results_filename=os.path.join("b_surface", "results.xml"), browndye_bin_dir="")
