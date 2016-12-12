@@ -27,6 +27,7 @@ from scipy import linalg
 from copy import deepcopy
 import xml.etree.ElementTree as ET
 from subprocess import check_output
+from operator import attrgetter # allows us to sort a list of objects by an object's attribute(s)
 
 k_boltz = 1.3806488e-23
 R_GAS_CONSTANT = 0.0019872 # in kcal/mol*K
@@ -124,14 +125,13 @@ class Milestone():
     self.sitename = sitename
     self.transitions = [] # all the transition statistics associated with this milestone
 
-
-  def parse_md_transitions(self):
+  def parse_md_transitions(self, info):
     'find all forward phase simulation output files'
     forward_dir_glob = os.path.join(self.directory,'md','fwd_rev',FORWARD_OUTPUT_GLOB)
     #print forward_dir_glob
     forward_output_filenames = glob.glob(forward_dir_glob)
     # read files and sift out the transition lines
-    transition_lines = [] # a list containing all lines of the output that mark transitions
+    transition_lines = [] # a list of transitions by milestone for easy rearrangement later for convergence analysis
     for filename in forward_output_filenames:
      # print 'output filename', filename
       for line in open(filename,'r'):
@@ -139,12 +139,19 @@ class Milestone():
           transition_lines.append(line)
       #pprint(transition_lines)
     # feed the lines into the Transition object
+    unsorted_transitions = []
     for line in transition_lines:
-      self.transitions.append(Transition(line))
+      transition = Transition(line)
+      unsorted_transitions.append(transition)
+      if transition.umbrella_step > info['max_umbrella_steps']:
+        info['max_umbrella_steps'] = transition.umbrella_step
       
-    return
+    # now sort the lines by ID and VEL_ID
+    sorted_transitions = sorted(unsorted_transitions, key=attrgetter('umbrella_step', 'velocity_step')) # sort transitions by umbrella_step, then velocity_step
+    self.transitions = sorted_transitions
+    return info
 
-  def get_md_transition_statistics(self, md_time_factor=DEFAULT_MD_TIME_FACTOR):
+  def get_md_transition_statistics(self, md_time_factor=DEFAULT_MD_TIME_FACTOR, max_umbrella_step=None):
     'parse the transition data to obtain transition counts'
     counts = {} # all the sources and their destinations
     total_counts = {} # keeps track of all counts to any destination
@@ -153,9 +160,13 @@ class Milestone():
     site_index = self.site
     site_name = self.sitename
     for transition in self.transitions:
+      
       source = transition.src
       dest = transition.dest
       time = transition.time
+      umbrella_step = transition.umbrella_step
+      if max_umbrella_step != None and umbrella_step > max_umbrella_step: # for convergence analysis, we may only want to sample a subset of umbrella steps
+        break
       #src_key = '%d_%d' % (site_index, source)
       src_key = '%s_%d' % (site_name, source)
       #dest_key = '%d_%d' % (site_index, dest)
@@ -213,6 +224,8 @@ class Transition():
     self.ligand_com = linedict['ligand COM'].strip().split()
     self.receptor_com = linedict['receptor COM'].strip().split()
     self.receptor_start_com = linedict['receptor start COM'].strip().split()
+    self.umbrella_step = int(linedict['ID'].strip().split()[0])
+    self.velocity_step = int(linedict['VEL_ID'].strip().split()[0])
 
   def print_status(self):
     print "src:", self.src
@@ -565,74 +578,29 @@ def make_free_energy_profile_boundaries(K, bound_indices, inf_index):
     
   return K
   
-
-def main():
-  parser = argparse.ArgumentParser(description='Analyzes SEEKR forward phase output to construct milestoning calculations on simulation analysis.')
-  #parser.add_argument('-s', '--sinkrad', dest="sinkrad", nargs=1, help="Sink radius for the Markov Model", action=Once) # make sure this is only specified once, cause its easy to mix this one up with '--skip'
-  onoff_group = parser.add_mutually_exclusive_group()
-  onoff_group.add_argument('--on', dest="on", default=True, help="Perform a k-on calculation - where a low state is the sink", action="store_true")
-  onoff_group.add_argument('--off', dest="off", default=False, help="Perform a k-off calculation - where a high state is the sink", action="store_true")
-  onoff_group.add_argument('--free_energy', dest="free_energy", default=False, help="Calculate a free energy profile - where there are no sinks", action="store_true")
-  parser.add_argument('-m', '--milestones', dest="milestones", type=str, help="Milestones file") # This should contain most of what the user needs
-  parser.add_argument('-b', '--bound_states', dest="bound_states", type=str, default="0", help="The milestone index of the bound state(s). If different bound states exist for different sites, then separate with a colon. For multiple bound states, separate with commas. Examples: '0', '1:2', '0:1,1:3'.")
-  # TODO: escape state?
-  parser.add_argument('--nobd', dest="nobd", help="Do not include the BD statistics in the calculation")
-  parser.add_argument('--nomd', dest="nomd", help="Do not include the MD statistics in the calculation")
-  parser.add_argument('--test', dest="test", help="Run the unittests", action="store_true")
-  parser.add_argument('--skip', dest='error_skip', type=int, default=1, help="define how many matrix samples to skip when doing MC error estimation" )
-  parser.add_argument('--number', dest='error_number', type=int, default=1000, help="define how many matrices to sample for MC error estimation" )
-  parser.add_argument('-v','--verbose', dest="verbose", help="verbose output", action="store_true")
-
-  args = parser.parse_args()
-  args = vars(args) # convert to a dictionary
-  print "args:", args
-  milestone_filename = args['milestones'] # parse the milestoning XML file
-  verbose = False
-  if args['verbose']:
-    print "verbose mode activated."
-    verbose = True
-    
-  if args['test']: # if we are just going to run the unittests, then run and exit
-    print "running Unittests..."
-    runner = unittest.TextTestRunner()
-    itersuite = unittest.TestLoader().loadTestsFromTestCase(Test_md) # because for some reason, unittest.main() doesn't work right
-    runner.run(itersuite)
-  assert milestone_filename, "A milestones XML file must be provided"
-  # figure out whether we are doing a k-on, k-off, or free energy profile calculation
-  bd_time = 0.0 # something to allow the calculations to work
-  if args['off']:
-    print "Running k-off calculations."
-    calc_type = "off"
-    
-  elif args['free_energy']:
-    print "Running free energy profile calculations."
-    calc_type = "free_energy"
-  else:
-    print "Running k-on calculations."
-    calc_type = "on" # by default
-    bd_time = 1.0
-    
-  error_skip = args['error_skip']
-  error_number = args['error_number']
-    
-  bound_dict = parse_bound_state_args(args['bound_states'])
-
-  # open milestoning file and parse everything into a full milestoning model
-  model = parse_milestoning_file(milestone_filename)
-  #model.make_directories()
-  # gather MD data - fill into model
-
+def read_transition_statistics_from_files(model, verbose):
+  '''This function parses the transitions statistics from the simulation output files for later analysis'''
+  info = {'max_umbrella_steps':0}
+  for site in model.sites:
+    for milestone in site.milestones:
+      if milestone.md == True and milestone.directory:
+        #if verbose: print 'parsing md transitions for:Anchor', milestone.fullname
+        print 'parsing md transitions for:Anchor', milestone.fullname
+        info = milestone.parse_md_transitions(info)
+  return info
+  
+def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time, max_umbrella_steps = None, error_number = 1, error_skip = 1):
+  '''main function to perform all kinetics analyses.
+  Given a Model() object with its statistics filled out, it will return an estimate of the kinetic
+  value, given all or a subset of its statistics.
+  '''
   counts = {}; total_counts = {}; total_times = {}; avg_times = {}; trans = {}
   end_indeces = []
   for site in model.sites:
     for milestone in site.milestones:
-     # print "directory:", milestone.directory
-     # print 'MD2?', milestone.md
-     # print 'BD2?', milestone.bd
       if milestone.md == True and milestone.directory:
-        print 'parsing md transitions for:Anchor', milestone.fullname
-        milestone.parse_md_transitions()
-        this_counts, this_total_counts, this_total_times, this_avg_times = milestone.get_md_transition_statistics(model.md_time_factor) # find the count statistics
+        if verbose: print 'parsing md transitions for:Anchor', milestone.fullname
+        this_counts, this_total_counts, this_total_times, this_avg_times = milestone.get_md_transition_statistics(model.md_time_factor, max_umbrella_steps) # find the count statistics
         total_counts = add_dictionaries(total_counts, this_total_counts)
         total_times = add_dictionaries(total_times, this_total_times)
         for src_key in this_counts.keys():
@@ -661,14 +629,11 @@ def main():
     temp = {}
     for dest_key in counts[src_key].keys(): # make the transition probability dictionary
       temp[dest_key] = float(counts[src_key][dest_key]) / float(total_counts[src_key])
-      if dest_key in end_indeces: # if this milestone is going toward an end index, then create it in the count matrix and set the time to zero, transitioning to the one it came from
+      #if dest_key in end_indeces: # if this milestone is going toward an end index, then create it in the count matrix and set the time to zero, transitioning to the one it came from # TODO: marked for removal
         #trans[dest_key] = {src_key: 0.9, dest_key: 0.1}
         #avg_times[dest_key] = 0.0
-        pass
+        #pass
     trans[src_key] = temp
-  #print "end_indeces:", end_indeces
-  
-  
   
   # b-surface milestone
   b_surface_counts, b_surface_total_counts, b_surface_total_times, b_surface_avg_times = model.b_surface_milestone.get_bd_transition_statistics("results.xml", bd_time=bd_time)
@@ -679,10 +644,9 @@ def main():
   for dest_key in b_surface_counts[src_key].keys():
     b_surface_trans[src_key][dest_key] = float(b_surface_counts[src_key][dest_key]) / float(b_surface_total_counts[src_key])
   
-  
   radius_dict = {}
   
-  if calc_type == "on": # TODO: these need to be added to the counts matrix somehow for the MC error
+  if calc_type == "on":
     trans['inf'] = {'inf':1.0}
     counts['inf'] = {'inf':1e99}
     avg_times['inf'] = 1.0
@@ -715,7 +679,6 @@ def main():
   elif calc_type == "off":
     trans['inf'] = {'inf':0.0}
     counts['inf'] = {'inf':0}
-    # TODO: fill out more here
     avg_times['inf'] = 0.0
     
   elif calc_type == "free_energy": # then the user wants a free energy profile
@@ -734,47 +697,20 @@ def main():
           
         if 'all' in bound_dict.keys():
           if milestone.index in bound_dict['all']:
-            #key = "%s_%s" % (site.name, milestone.index)
             bound_keys.append(key)
             
         if milestone.shape == "sphere":
           radius_dict[key] = milestone.radius
     
-    '''
-    found_sink = False
-    for site in model.sites:
-      for milestone in site.milestones:
-        if site.name in bound_dict.keys():
-          if milestone.index in bound_dict[site.name]: # then make it the bound state by altering the transition properties.
-            key = "%s_%s" % (site.name, milestone.index)
-            bound_keys.append(key)
-            #trans[key] = {key:0.0} # infinity is now a sink state
-            #counts[key] = {key:0}
-            #avg_times[key] = 0.0
-            found_sink = True
-            print "setting site: %s to be the sink state" % key
-        if 'all' in bound_dict.keys():
-          if milestone.index in bound_dict['all']:
-            key = "%s_%s" % (site.name, milestone.index)
-            bound_keys.append(key)
-            #trans[key] = {key:0.0}
-            #counts[key] = {key:0}
-            #avg_times[key] = 0.0
-            found_sink = True
-            print "setting site: %s to be the sink state" % key
-    assert found_sink, "Alert: no bound state found matching criteria: %s. Make sure that the site names and milestone indices match." % args['bound_states']
-  '''
   if verbose:
     print "bound_dict:", bound_dict
     print "trans:"
     print trans
-  
     print "radius_dict:"
     print radius_dict
   
-  #avg_t = np.zeros((n,1))
   K, index_dict = trans_dict_to_matrix(trans)
-  n,m = K.shape
+  n, m = K.shape
   N, N_index_dict = trans_dict_to_matrix(counts)
   avg_t = avg_t_vector(avg_times, index_dict)
   inf_index = None
@@ -793,10 +729,10 @@ def main():
     print "counts:", counts
     print "inf_index:", inf_index
   
-  # Now sampling MC matrices
-  print "Now sampling rate matrices for MC error estimation."
-  Q_mats = monte_carlo_milestoning_nonreversible_error(N, avg_t, num = error_number, skip = error_skip)
-  
+  if doing_error:
+    # Now sampling MC matrices
+    print "Now sampling rate matrices for MC error estimation."
+    Q_mats = monte_carlo_milestoning_nonreversible_error(N, avg_t, num = error_number, skip = error_skip)
   
   for index_key in index_dict.keys():
     if index_dict[index_key] in bound_keys:
@@ -831,9 +767,6 @@ def main():
             if verbose: print "setting site: %s to be a starting state" % key
     q0 = q0 / site_count # normalize
   
-    
-  
-  # === NEED TO CLEAN UP BEYOND THIS POINT ===
   if verbose:
     print 'counts:' , counts
     print "avg_times dictionary:", avg_times
@@ -849,82 +782,45 @@ def main():
 
   if calc_type == "on":
     beta = get_beta_from_K_q0(K, q0, bound_indices)
-    betas = []
-    for Q in Q_mats:
-      #print "Q:", Q
-      new_K, new_avg_t = rate_mat_to_prob_mat(Q)
-      new_beta = get_beta_from_K_q0(new_K, q0, bound_indices)
-      betas.append(new_beta)
+    
+    if doing_error:
+      betas = []
+      for Q in Q_mats:
+        new_K, new_avg_t = rate_mat_to_prob_mat(Q)
+        new_beta = get_beta_from_K_q0(new_K, q0, bound_indices)
+        betas.append(new_beta)
       
-    beta_std = np.std(betas)
-    #print "len(betas):", len(betas)
-    print "np.mean(betas):", np.mean(betas), "np.std(betas)", np.std(betas)
+      beta_std = np.std(betas)
+    else:
+      beta_std = 0.0
 
-    print "beta:", beta, "+/-", beta_std
+    
     k_b = run_compute_rate_constant(results_filename=os.path.join("b_surface", "results.xml"), browndye_bin_dir="")
     if verbose: print "k(b):", k_b
     k_on = k_b * beta
     k_on_std = k_b * beta_std
-    print "k-on:", k_on, "+/-", k_on_std, "M^-1 s^-1"
     
-    # now calculate p stationary
-    #p = np.zeros((n,1))
-    #print "p:"
-    #total_p = 0.0
-    #for i in range(n):
-      #print q_inf[i,0]
-      #p[i,0] = q_inf[i,0] * avg_t[i,0]
-      #total_p += p[i,0]
-  
-    #print p
-  '''
-  for i in range(n):
-    p[i,0] /= total_p
-    print p[i,0]
-  '''
-
-  # now calculate MFPT
-  #sink = end_indeces[-1] # just choose the last one to be a sink state
-  #trans[sink] = {} # not going anywhere
-  #t_mat_sink, index_dict = trans_dict_to_matrix(trans)
-  #print "t_mat_sink:"
-  #print t_mat_sink
+    final_result = [k_on, k_on_std, beta, beta_std]
+    
   if calc_type == "off":
-    #t_mat_sink = np.matrix(t_mat_sink)
     I = np.matrix(np.identity(n))
     aux = np.linalg.solve(I - K.T, avg_t)
     if verbose: print "aux:", aux
     mfpt = q0.T.dot(aux)
     koffs = []
     mfpts = []
-    for Q in Q_mats:
-      new_K, new_avg_t = rate_mat_to_prob_mat(Q, calc_type)
-      new_mfpt = q0.T.dot(np.linalg.solve(I - new_K.T, new_avg_t))
-      mfpts.append(new_mfpt)
-      koffs.append(1e15/new_mfpt)
+    if doing_error:
+      for Q in Q_mats:
+        new_K, new_avg_t = rate_mat_to_prob_mat(Q, calc_type)
+        new_mfpt = q0.T.dot(np.linalg.solve(I - new_K.T, new_avg_t))
+        mfpts.append(new_mfpt)
+        koffs.append(1e15/new_mfpt)
+        
+    k_off = 1e15/mfpt
+    k_off_std = np.std(koffs)
+    mfpt_std = np.std(mfpts)
+    final_result = [k_off, k_off_std, mfpt, mfpt_std]
     
-    #print "np.mean(koffs):", np.mean(koffs)
-    print "MFPT:", mfpt, "+/-", np.std(mfpts), "fs"
-    print "k-off:", 1e15/mfpt, "+/-", np.std(koffs), "s^-1"
-
-  '''
-  # now calculate flux quantity
-  for sink in end_indeces: # all end states are sinks
-    trans[sink] = {sink:1.0} # all sink states go to themselves
-  t_mat_flux, index_dict = trans_dict_to_matrix(trans)
-
-  t_mat_flux_inf = np.matrix(t_mat_flux) ** 2000000
-  q_flux = t_mat_flux_inf* q0
-
-  print "q_flux:"
-  pprint(q_flux)
-  print "q_flux[0]:", float(q_flux[0])
-  print "q_flux[-1]:", float(q_flux[-1])
-
-  print "trans:"
-  pprint(trans)
-  '''
-  
   if calc_type == 'free_energy':
     pstat = np.matrix(np.zeros((n, 1)))
     delta_G = np.matrix(np.zeros((n,1)))
@@ -933,14 +829,11 @@ def main():
     K_inf = np.matrix(K) ** 99999999
     qstat = np.dot(K_inf,q0)
     
-    #print "model.temperature:", model.temperature
-    #print "type(model.temperature):", type(model.temperature)
     for i in range(n):
       pstat[i,0] = qstat[i,0] * avg_t[i,0]
       
     
-    # TODO: change this hardcode to be a more general bound-state index instead of "1"
-    pstat_ref = pstat[1,0]
+    pstat_ref = pstat[bound_indices[0],0]
     for i in range(n):
       if pstat[i,0] == 0.0:
         delta_G[i,0] = 1e99
@@ -972,6 +865,7 @@ def main():
          
     pstat_std = np.matrix(np.zeros((n, 1)))
     delta_G_std = np.matrix(np.zeros((n, 1)))
+
     for i in range(n):
       pstat_std_i = []
       delta_G_std_i = []
@@ -993,16 +887,142 @@ def main():
       print "delta_G:", delta_G
       print "pstat_std:", pstat_std
       print "delta_G_std:", delta_G_std
+      
+    final_result = [pstats, pstat_std, delta_G, delta_G_std, index_dict, radius_dict]
     
+  return final_result # will be different depending on calc_type
+
+def main():
+  parser = argparse.ArgumentParser(description='Analyzes SEEKR forward phase output to construct milestoning calculations on simulation analysis.')
+  #parser.add_argument('-s', '--sinkrad', dest="sinkrad", nargs=1, help="Sink radius for the Markov Model", action=Once) # make sure this is only specified once, cause its easy to mix this one up with '--skip'
+  onoff_group = parser.add_mutually_exclusive_group()
+  onoff_group.add_argument('--on', dest="on", default=True, help="Perform a k-on calculation - where a low state is the sink", action="store_true")
+  onoff_group.add_argument('--off', dest="off", default=False, help="Perform a k-off calculation - where a high state is the sink", action="store_true")
+  onoff_group.add_argument('--free_energy', dest="free_energy", default=False, help="Calculate a free energy profile - where there are no sinks", action="store_true")
+  parser.add_argument('-m', '--milestones', dest="milestones", type=str, help="Milestones file") # This should contain most of what the user needs
+  parser.add_argument('-b', '--bound_states', dest="bound_states", type=str, default="0", help="The milestone index of the bound state(s). If different bound states exist for different sites, then separate with a colon. For multiple bound states, separate with commas. Examples: '0', '1:2', '0:1,1:3'.")
+  # TODO: escape state?
+  parser.add_argument('--nobd', dest="nobd", help="Do not include the BD statistics in the calculation")
+  parser.add_argument('--nomd', dest="nomd", help="Do not include the MD statistics in the calculation")
+  parser.add_argument('--test', dest="test", help="Run the unittests", action="store_true")
+  parser.add_argument('--skip', dest='error_skip', type=int, default=1, help="define how many matrix samples to skip when doing MC error estimation" )
+  parser.add_argument('--number', dest='error_number', type=int, default=1000, help="define how many matrices to sample for MC error estimation" )
+  parser.add_argument('-v','--verbose', dest="verbose", help="verbose output", action="store_true")
+  parser.add_argument('-i','--info', dest="info", help="Print information on transitions without computing anything, including the number of transition statistics read.", action="store_true")
+  parser.add_argument('--conv_filename', dest='conv_filename', type=str, default="", help="If provided, an analysis of convergence of the computed value will be performed, and the results will be written to the specified file." )
+  parser.add_argument('--conv_stride', dest='conv_stride', type=int, default=100, help="The stride through umbrella sampling statistics when a convergence analysis is being performed." )
+
+  args = parser.parse_args()
+  args = vars(args) # convert to a dictionary
+  print "args:", args
+  milestone_filename = args['milestones'] # parse the milestoning XML file
+  verbose = False
+  info_mode = False
+  if args['verbose']:
+    print "verbose mode activated."
+    verbose = True
+    
+  if args['info']:
+    print "'info' mode active, Only printing read information, not running any kinetics calculations."
+    info_mode = True
+    
+  if args['test']: # if we are just going to run the unittests, then run and exit
+    print "running Unittests..."
+    runner = unittest.TextTestRunner()
+    itersuite = unittest.TestLoader().loadTestsFromTestCase(Test_md) # because for some reason, unittest.main() doesn't work right
+    runner.run(itersuite)
+  assert milestone_filename, "A milestones XML file must be provided"
+  # figure out whether we are doing a k-on, k-off, or free energy profile calculation
+  bd_time = 0.0 # something to allow the calculations to work
+  error_skip = args['error_skip']
+  error_number = args['error_number']
+  conv_filename = args['conv_filename']
+  conv_stride = args['conv_stride']
+  
+  if args['off']:
+    print "Running k-off calculations."
+    calc_type = "off"
+    
+  elif args['free_energy']:
+    print "Running free energy profile calculations."
+    calc_type = "free_energy"
+    assert not conv_filename, "Alert: free energy profile not currently supported in convergence mode. Please leave --conv_filename argument blank. Aborting..."
+    
+  else:
+    print "Running k-on calculations."
+    calc_type = "on" # by default
+    bd_time = 1.0
+    
+  
+  bound_dict = parse_bound_state_args(args['bound_states'])
+
+  # open milestoning file and parse everything into a full milestoning model
+  model = parse_milestoning_file(milestone_filename)
+  
+  # gather MD data - fill into model
+  # now read the file transition information
+  info_dict = read_transition_statistics_from_files(model, verbose)
+  
+  if info_mode:
+    print "Highest umbrella sampling step", info_dict['max_umbrella_steps']
+    print "more info to be added later..."
+    print "Aborting."
+    exit()
+  
+  # starting kinetics analysis
+  final_result = analyze_kinetics(calc_type, model, bound_dict, doing_error=True, verbose=verbose, bd_time=bd_time,  max_umbrella_steps=None, error_number=error_number, error_skip=error_skip)
+  
+  if calc_type == "on":
+    [k_on, k_on_std, beta, beta_std] = final_result
+    print "beta:", beta, "+/-", beta_std
+    print "k-on:", k_on, "+/-", k_on_std, "M^-1 s^-1"
+    
+  
+  if calc_type == "off":
+    [k_off, k_off_std, mfpt, mfpt_std] = final_result
+    print "MFPT:", mfpt, "+/-", mfpt_std, "fs"
+    print "k-off:", k_off, "+/-", k_off_std, "s^-1"
+    [k_off, k_off_std]
+  
+  if calc_type == 'free_energy':
+    [pstats, pstat_std, delta_G, delta_G_std, index_dict, radius_dict] = final_result
     print "Free energy profile (kcals/mol):"
     print "radius:\tdelta G\t+/-"
+    n, m = delta_G.shape
     for i in range(n):
       radius = "???"
       if index_dict[i] in radius_dict.keys():
         radius = radius_dict[index_dict[i]]
       if delta_G[i,0] >= 1e99: continue # don't print huge numbers
       print '%s\t%2.3f\t%2.3f' % (radius, delta_G[i,0], delta_G_std[i,0])
-
+  
+  if conv_filename:
+    print "Writing convergence data to file name:", conv_filename
+    final_results = []
+    umbrella_steps_range = range(0, info_dict['max_umbrella_steps'], conv_stride)
+    for umbrella_steps in umbrella_steps_range:
+      final_result = analyze_kinetics(calc_type, model, bound_dict, doing_error=False, verbose=False, bd_time=bd_time,  max_umbrella_steps=umbrella_steps, error_number=1, error_skip=1)
+      if calc_type == 'off':
+        final_result = map(float, final_result)
+      final_results.append(final_result)
+      
+    if calc_type == 'on':
+      header_list = ['k_on','k_on_std','beta','beta_std']
+      
+    if calc_type == 'off':
+      header_list = ['k_off', 'k_off_std', 'mfpt', 'mfpt_std']
+      
+    if calc_type == 'free_energy':
+      header_list = ['pstats', 'pstat_std', 'delta_G', 'delta_G_std', 'index_dict', 'radius_dict']
+      
+      
+    conv_file = open(conv_filename, 'w')
+    conv_file.write('\t'.join(header_list) + '\n')
+    for i in range(len(final_results)):
+      conv_file.write('\t'.join(map(str, final_results[i])) + '\n')
+    
+    conv_file.close()
+  
   # ideas for analyze.py:
   # - lots of information in the milestones.xml file: directories, temperature, (check)
   # - option to choose bound state (check)
