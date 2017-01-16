@@ -271,10 +271,11 @@ We will first compile a special version of NAMD needed for the fwd_rev
 phase...
 
 How to compile for Stampede:
-Obtain the NAMD source code by going to your home directory, create a
-directory named, say, namd_compile. Then 'cd' into it. From here, run:
+A tarball of the NAMD source code is located in the SEEKR/namd_compile directory.
 
-cp /home1/02520/heyneman/namd_compile/NAMD_CVS-2015-11-02_Source.tar.gz
+Create a directory named, say, namd_compile. Then 'cd' into it. From here, run:
+
+cp SEEKR/namd/NAMD_CVS-2015-11-02_Source.tar.gz .
 
 Then unpack it with tar -xzf NAMD_CVS-2015-11-02_Source.tar.gz
 
