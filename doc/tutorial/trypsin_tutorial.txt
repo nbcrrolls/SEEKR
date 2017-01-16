@@ -249,7 +249,7 @@ for i in anchor_*/md/temp_equil; do echo $i; cd $i; for f in {1..13}; do echo " 
 
 This will run the temperature equilibrations, it should finish within an hour or so. I recommend loading the DCD files into VMD to verify that everything is still OK after the temperature equilibrations. The length of the equilibration is determined by the input file.
 
-To save time loading all of the DCD files into VMD, use the following command in the VMD TkConsole after loading the /anchor_*/md/building/holo.prmtop found in trypsin_project_directory and opening vmd in the temp_equil directory:
+To save time loading all of the DCD files into VMD, use the following command in the VMD TkConsole after loading the /anchor_*/md/building/holo.parm7  found in trypsin_project_directory and opening vmd in the temp_equil directory:
 
 for {set i 1} {$i <= 13} {incr i} {mol addfile temp_equil$i.dcd}
 
@@ -572,5 +572,5 @@ When complete, it will print out a k-on and other useful information.
 
 To see the free energy profile, run the following command:
 
-python ~/seekr/analyze_brj.py --free_energy -m milestones.xml -b 0 --skip 100 --number 1000
+python ~/seekr/analyze.py --free_energy -m milestones.xml -b 0 --skip 100 --number 1000
 
