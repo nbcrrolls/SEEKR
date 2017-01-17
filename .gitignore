@@ -3,6 +3,7 @@
 # exclude .pyc files
 *.pyc
 *~
+bin/namd_template.py
 
 # exclude some specific files
 

@@ -1,0 +1,25 @@
+This document outlines how to run the unit tests for the SEEKR package.
+
+Make sure you set an environmental variable named INPUTGEN, that is the location of the inputgen.py script. Example: /home/username/src/apbs-pdb2pqr/pdb2pqr/src/inputgen.py
+
+Similarly, the BROWNDYE_BIN environmental variable must be set to the directory where all the Browndye programs are located.
+
+Python Unittests:
+
+In the SEEKR/bin directory, run the following commands:
+python adv_template.py
+python apbs.py
+python analyze.py --test
+python bd.py
+python colvars.py
+python filetree.py
+python md.py
+python milestones.py
+python pdb2.py
+python positions_orient.py
+python transformations.py # no output expected
+
+NOTE: no unittests exist for control.py, fix_pdb.py, hidr.py, and psfmerge.py
+
+TCL unittests not properly implemented yet
+

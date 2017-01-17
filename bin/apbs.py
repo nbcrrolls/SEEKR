@@ -6,7 +6,7 @@ apbs.py
 creates the necessary files to run an electrostatic simulation using APBS
 
 '''
-import os, sys #, math, shutil, subprocess #, make_fxd
+import os, sys, shutil #, math, subprocess #, make_fxd
 #import numpy as np
 import pdb2 as pdb
 #from copy import deepcopy # needed to keep track of separate structure objects
@@ -23,8 +23,8 @@ self_path = os.path.dirname(os.path.realpath(__file__)) # get the path to this s
 
 apbs_input_template_location = os.path.join(self_path, 'apbs_input.template')
 
-test_inputgen_location = "/soft/linux/pdb2pqr-1.8/src/inputgen.py"
-test_apbs_location = "apbs" #"/soft/linux/atlas_v6/atlas_package/bin/apbs"
+test_inputgen_location = os.environ['INPUTGEN']
+test_apbs_location = "apbs"
 test_pqr_filename = "../test/1cbj.pqr"
 
 default_apbs_params = {
@@ -65,7 +65,8 @@ def make_apbs_input_using_inputgen(inputgen_filename, pqr_filename, fadd=60, cfa
   runstring = "python %s --potdx --fadd=%s --cfac=%s --space=%s --gmemceil=%s --istrng=%s %s" % (inputgen_filename, fadd, cfac, resolution, gmemceil, ionic_str, pqr_filename, )
   print "Now creating APBS input file using command:", runstring
   os.system(runstring)
-  pre_ext = pqr_filename.split('.')[0] # the part of the filename before the extension
+  #pre_ext = '.'.join(pqr_filename.split('.')[0:-1]) # the part of the filename before the extension
+  pre_ext = pqr_filename
   input_filename = os.path.join(pre_ext+'.in')
   print "APBS input_filename", input_filename
   return input_filename
@@ -105,6 +106,9 @@ def make_apbs_input_using_template (new_apbs_params, apbs_file_location="apbs.in
 def run_apbs (apbs_filename, input_filename, pqr_filename, std_out="apbs.out"):
   """runs apbs using a given input file "input_filename" and writes all standard output to 'std_out'."""
   rundir = os.path.dirname(input_filename)
+  print "copying file: %s to directory: %s" % (pqr_filename, os.path.join(rundir,os.path.basename(pqr_filename)))
+  if os.path.abspath(os.path.dirname(pqr_filename)) != os.path.abspath(rundir):
+    shutil.copyfile(pqr_filename, os.path.join(rundir,os.path.basename(pqr_filename)))
   pqr_filename = os.path.basename(pqr_filename)
   input_filename = os.path.basename(input_filename)
   std_out = os.path.basename(std_out)
@@ -194,10 +198,10 @@ class Test_apbs_functions(unittest.TestCase):
     self.assertTrue(fileexists) # if it exists, then that's good
 
   def test_run_apbs(self): # test whether apbs is running properly
-    self.APBS_inp = make_apbs_input_using_inputgen(test_inputgen_location, test_pqr_filename) # get file location
+    self.APBS_inp = make_apbs_input_using_inputgen(test_inputgen_location, os.path.abspath(test_pqr_filename)) # get file location
     self.APBS_inp2 = '/tmp/input2.in'
     self.inp_dict = scrape_inputfile(self.APBS_inp)
-    self.inp_dict['pqr'] = self.inp_dict['stem'] = test_pqr_filename
+    self.inp_dict['pqr'] = self.inp_dict['stem'] = os.path.abspath(test_pqr_filename)
     make_apbs_input_using_template(self.inp_dict, self.APBS_inp2)
     run_apbs(test_apbs_location, self.APBS_inp2, test_pqr_filename)
     self.APBS_dx = test_pqr_filename + '.dx'

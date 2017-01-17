@@ -733,17 +733,18 @@ class Test_bd_functions(unittest.TestCase):
 
   def test_dict_to_xml(self):
     test_dict = {'root':{'layer1a':{'layer2a':'setting1',},'layer1b':'setting2','layer1c':'setting3'}}
-    test_xml = """<?xml version="1.0" ?>\n<root>\n  <layer1c>\n    setting3\n  </layer1c>\n  <layer1b>\n    setting2\n  </layer1b>\n  <layer1a>\n    <layer2a>\n      setting1\n    </layer2a>\n  </layer1a>\n</root>\n"""
+    test_xml = '<?xml version="1.0" ?>\n<root>\n  <layer1c>setting3</layer1c>\n  <layer1b>setting2</layer1b>\n  <layer1a>\n    <layer2a>setting1</layer2a>\n  </layer1a>\n</root>\n'
     self.assertEqual(dict2xml(test_dict).text(),test_xml)
 
   def test_pqr2xml(self):
+    browndye_bin = os.environ['BROWNDYE_BIN']
     self.XML = pqr2xml(test_pqr_filename, pqr2xml_program=os.path.join(browndye_bin, 'pqr2xml'))
     fileexists = os.path.exists(self.XML)
     self.assertTrue(fileexists)
 
   def test_make_rxn_criteria(self):
 
-    test_xml = """<?xml version="1.0" ?>\n<roottag>\n  <first-state>\n    start\n  </first-state>\n  <reactions>\n    <reaction>\n      <name>\n        0_0\n      </name>\n      <state-before>\n        start\n      </state-before>\n      <state-after>\n        end\n      </state-after>\n      <criterion>\n        <n-needed>\n          1\n        </n-needed>\n        <pair>\n          <atoms>\n            4323 4324\n          </atoms>\n          <distance>\n            7.000000\n          </distance>\n        </pair>\n      </criterion>\n    </reaction>\n  </reactions>\n</roottag>\n"""
+    test_xml = """<?xml version="1.0" ?>\n<roottag>\n  <first-state>start</first-state>\n  <reactions>\n    <reaction>\n      <name>0_0</name>\n      <state-before>start</state-before>\n      <state-after>end</state-after>\n      <criterion>\n        <n-needed>1</n-needed>\n        <pair>\n          <atoms>4323 4324</atoms>\n          <distance>7.000000</distance>\n        </pair>\n      </criterion>\n    </reaction>\n  </reactions>\n</roottag>\n"""
     self.assertEqual(test_xml, make_rxn_criteria(test_rxns, [test_pqr,test_pqr]))
 
   #def test_anchor_touching_starting_surface(self):
@@ -762,9 +763,9 @@ class Test_bd_functions(unittest.TestCase):
 
 if __name__=='__main__':
   print "Running unit tests for bd.py"
-  test_holo = parser.get_structure('small','test/test_tiny.pdb')
-  test_inputgen_filename = "/soft/pdb2pqr/latest/src/inputgen.py" # NOTE: These directories will need to be changed/ made relative
-  test_pqr_filename = "test/1cbj.pqr"
+  test_holo = parser.get_structure('small','../test/test_tiny.pdb')
+  test_inputgen_filename = os.environ['INPUTGEN']
+  test_pqr_filename = "../test/1cbj.pqr"
   #old_test_rxns = [[(1.0, 2.0, 3.0), (4.0, 5.0, 6.0), 7.0],]
   test_rxns = [{'centerx':1.0, 'centery':2.0, 'centerz':3.0, 'ligx':4.0, 'ligy':5.0, 'ligz':6.0, 'radius':7.0, 'index':0, 'siteid':0}]
   test_pqr = parser.get_structure('pqr', test_pqr_filename, pqr=True)
