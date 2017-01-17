@@ -4,6 +4,7 @@
 *.pyc
 *~
 bin/namd_template.py
+*.dx
 
 # exclude some specific files
 
