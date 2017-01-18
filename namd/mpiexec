@@ -1,0 +1,12 @@
+#!/bin/csh -f
+
+# echo - $* >> mpiexec_args
+
+# drop -n <N>
+shift
+shift
+
+# echo - $* >> mpiexec_args
+
+exec /usr/local/bin/ibrun $*
+
