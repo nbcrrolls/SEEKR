@@ -37,6 +37,7 @@ Files
 This is a description of the folders in the base seekr/ directory.
 doc/ - Find detailed information about the installation, usage, tutorials, and troubleshooting of SEEKR in this folder
 test/ - Most of the tests in SEEKR are integrated directly into the scripts, but some tests are run externally, and are included in this directory.
+namd/ - Contains files necessary for compiling the special build of NAMD used by SEEKR
 tools/ - A number of non-essential scripts are included in this directory that may be useful for calculations, preparations, and analysis.
 website/ - a full copy of the SEEKR website
 
