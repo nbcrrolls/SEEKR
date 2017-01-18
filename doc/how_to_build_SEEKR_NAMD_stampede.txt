@@ -15,9 +15,15 @@ Unpack NAMD and matching Charm++ source code:
   cd NAMD_2.10_Source
   tar xf charm-6.7.0-pre.tar
   
-  MAKE SURE YOU PUT MY SOURCE CODE FILES INTO THE SRC/ DIRECTORY
+IMPORTANT: MAKE SURE YOU PUT MY SOURCE CODE FILES INTO THE SRC/ DIRECTORY
+  You can find my source code files in the seekr/namd/src directory. A couple of the default files will be overwritten.
+  The names of the source code files are:
+   - eigeng.c  
+   - gauss.C  
+   - TclCommands.C  
+   - TclVec.C
 
-GOT this script from JIM
+I got the following script from JIM
 
 replace my work directory with your work directory:
 
@@ -105,9 +111,9 @@ Make sure you include:
 replicaUniformPatchGrids on
 in the NAMD input file script
 
-Use the following command to run locally:
-/home/lvotapka/Downloads/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/charmrun ++local +p1 /home/lvotapka/Downloads/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/namd2 +replicas 1 --fftwestimate yes fwd_rev1.namd +stdout stdout.%d
+Use something like the following command to run locally:
+/home/username/Downloads/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/charmrun ++local +p1 /home/username/Downloads/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/namd2 +replicas 1 --fftwestimate yes fwd_rev1.namd +stdout stdout.%d
 
 Or this one for simple tests:
-/home1/01624/lvotapka/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/charmrun +p16 /home1/01624/lvotapka/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/namd2 +replicas 1 --fftwestimate yes fwd_rev1.namd
+/home1/username/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/charmrun +p16 /home1/username/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/namd2 +replicas 1 --fftwestimate yes fwd_rev1.namd
 

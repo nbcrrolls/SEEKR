@@ -914,7 +914,7 @@ def main():
 
   args = parser.parse_args()
   args = vars(args) # convert to a dictionary
-  print "args:", args
+  #print "args:", args
   milestone_filename = args['milestones'] # parse the milestoning XML file
   verbose = False
   info_mode = False
@@ -929,8 +929,10 @@ def main():
   if args['test']: # if we are just going to run the unittests, then run and exit
     print "running Unittests..."
     runner = unittest.TextTestRunner()
-    itersuite = unittest.TestLoader().loadTestsFromTestCase(Test_md) # because for some reason, unittest.main() doesn't work right
+    itersuite = unittest.TestLoader().loadTestsFromTestCase(Test_analyze) # because for some reason, unittest.main() doesn't work right
     runner.run(itersuite)
+    exit()
+    
   assert milestone_filename, "A milestones XML file must be provided"
   # figure out whether we are doing a k-on, k-off, or free energy profile calculation
   bd_time = 0.0 # something to allow the calculations to work
@@ -1041,10 +1043,10 @@ class Test_analyze(unittest.TestCase):
 
   def test_parse_milestoning_file(self):
     test_milestoning_text = '''<?xml version="1.0" ?>
-    <root><temperature>300</temperature><site><milestone><index>0</index> <fullname> milestone0 </fullname> <shape> plane </shape> <anchor> (0.0,0.0,-40.68) </anchor> <end> True </end> <bd> False </bd> <normal> (0.0,0.0,1.0) </normal> </milestone>
-    <milestone><index>1</index> <fullname> milestone1 </fullname> <shape> sphere </shape> <anchor> (0.0,0.0,-30.68) </anchor> <end> False </end> <bd> False </bd> <radius> 3.1415 </radius> </milestone></site></root>
+    <root><temperature>300</temperature><site><name>site1</name><milestone><index>0</index> <fullname> milestone0 </fullname><directory></directory> <shape> plane </shape> <anchor> (0.0,0.0,-40.68) </anchor> <end> True </end> <bd> False </bd><md>True</md> <normal> (0.0,0.0,1.0) </normal> </milestone>
+    <milestone><index>1</index> <fullname> milestone1 </fullname><directory></directory> <shape> sphere </shape> <anchor> (0.0,0.0,-30.68) </anchor> <end> False </end> <bd> False </bd><md>True</md> <radius> 3.1415 </radius> </milestone></site></root>
     '''
-    test_milestoning_filename = '/usr/tmp/test_milestoning.xml'
+    test_milestoning_filename = '/tmp/test_milestoning.xml'
     test_milestoning_file = open(test_milestoning_filename, 'w')
     test_milestoning_file.write(test_milestoning_text)
     test_milestoning_file.close()
@@ -1054,6 +1056,6 @@ class Test_analyze(unittest.TestCase):
     self.assertEqual(test_model.num_sites, 1)
     self.assertEqual(test_model.sites[0].milestones[0].anchor, '(0.0,0.0,-40.68)')
     self.assertEqual(test_model.sites[0].milestones[1].index, '1')
-    self.assertEqual(test_model.temperature, '300')
+    self.assertEqual(test_model.temperature, 300.0)
 
 if __name__ == "__main__": main()

@@ -13,7 +13,14 @@ Unpack NAMD and matching Charm++ source code:
   cd NAMD_2.10_Source
   tar xf charm-6.7.0-pre.tar
   
-  MAKE SURE YOU PUT MY SOURCE CODE FILES INTO THE SRC/ DIRECTORY
+
+IMPORTANT: MAKE SURE YOU PUT MY SOURCE CODE FILES INTO THE SRC/ DIRECTORY
+  You can find my source code files in the seekr/namd/src directory. A couple of the default files will be overwritten.
+  The names of the source code files are:
+   - eigeng.c  
+   - gauss.C  
+   - TclCommands.C  
+   - TclVec.C
 
 Build and test the Charm++/Converse library (shared memory, netlrts version):
   cd charm-6.7.0-pre
@@ -70,6 +77,6 @@ Use the following command to run:
 
 Modify the '+p' argument to be the number of processors used for the simulation. And '+replicas' tells NAMD how many replicas to run.
 
-which on my computer is:
-/home/lvotapka/Downloads/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/charmrun +p8 ++local /home/lvotapka/Downloads/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/namd2 +replicas 4 fwd_rev1.namd +stdout fwd_rev1.out.%d
+which on a computer might be:
+/home/username/Downloads/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/charmrun +p8 ++local /home/username/Downloads/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/namd2 +replicas 4 fwd_rev1.namd +stdout fwd_rev1.out.%d
 

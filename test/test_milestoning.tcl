@@ -15,13 +15,11 @@ set GRID_EDGE_RAD 1.0
 set RECRANGE {5 to 8}
 set RECPA1_LIST {}
 set RECPA3_LIST {}
-set FHPD_FILE "/tmp/fhpd_test.txt"
+#set FHPD_FILE "../test/fhpd_test.txt"
 proc addgroup {arg} {} ;# dummy function
 
 # a list of all the functions to test
-set proclist {
-add_id_to_FHPD 
-orient 
+set proclist { 
 easy_principalaxes 
 range 
 parse_selection
@@ -38,36 +36,38 @@ check_planar_milestone
 calc_ref_movements
 calcforces
 }
+#add_id_to_FHPD 
+#orient
 
-source milestoning.tcl
+source ../bin/milestoning.tcl
 
 proc Assert_equal { arg1 arg2 {func "not specified"}} {
   if {$arg1 != $arg2} {error "Assert_equal: in function $func, arguments not equal: $arg1, $arg2"} else {return "passed"}
 }
 
-proc test_add_id_to_FHPD {} {
-  global FHPD_FILE
-  file delete $FHPD_FILE
-  add_id_to_FHPD 42
-  add_id_to_FHPD 63
-  add_id_to_FHPD 0
-  set testfile [open $FHPD_FILE r]
-  set lines [read $testfile]
-  set linelist [split $lines]
-  close $testfile
-  Assert_equal $linelist {42 63 0 {}} add_id_to_FHPD
-  return passed
-}
+#proc test_add_id_to_FHPD {} {
+#  global FHPD_FILE
+#  file delete $FHPD_FILE
+#  add_id_to_FHPD 42
+#  add_id_to_FHPD 63
+#  add_id_to_FHPD 0
+#  set testfile [open $FHPD_FILE r]
+#  set lines [read $testfile]
+#  set linelist [split $lines]
+#  close $testfile
+#  Assert_equal $linelist {42 63 0 {}} add_id_to_FHPD
+#  return passed
+#}
 
-proc test_orient {} {
-  set vec1 {2 3 4}
-  set vec2 {-6 3 -1}
-  set mat1 [orient {0 0 0} $vec1 $vec2]
-  set finalvec1 [vecnorm [ lrange [mat_vec_mult $mat1 "$vec1 1"] 0 2 ]]
-  set finalvec2 [vecnorm $vec2]
-  if {[vecdot $finalvec1 $finalvec2] < 0.99999} {error "'orient' function not working properly: test failed. vec1: $finalvec1, vec2: $finalvec2"}
-  return passed
-}
+#proc test_orient {} {
+#  set vec1 {2 3 4}
+#  set vec2 {-6 3 -1}
+#  set mat1 [orient {0 0 0} $vec1 $vec2]
+#  set finalvec1 [vecnorm [ lrange [mat_vec_mult $mat1 "$vec1 1"] 0 2 ]]
+#  set finalvec2 [vecnorm $vec2]
+#  if {[vecdot $finalvec1 $finalvec2] < 0.99999} {error "'orient' function not working properly: test failed. vec1: $finalvec1, vec2: $finalvec2"}
+#  return passed
+#}
 
 proc test_easy_principalaxes {} {
   puts "ALERT: this function has no unit tests."

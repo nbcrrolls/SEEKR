@@ -1,0 +1,29 @@
+read
+    mol pqr 1cbj.pqr
+end
+elec 
+    mg-auto
+    dime 225 225 257
+    cglen 188.9040 182.5880 275.1400
+    fglen 107.2260 105.6470 128.7850
+    cgcent mol 1
+    fgcent mol 1
+    mol 1
+    lpbe
+    bcfl sdh
+    ion charge -1.00 conc 0.150 radius 1.8150
+    ion charge 1.00 conc 0.150 radius 1.8750
+    pdie 2.0000
+    sdie 78.5400
+    srfm smol
+    chgm spl2
+    sdens 10.00
+    srad 1.40
+    swin 0.30
+    temp 298.15
+    calcenergy total
+    calcforce no
+    write pot dx /home/lvotapka/seekr/test/1cbj.pqr
+end
+print elecEnergy 1 end
+quit
