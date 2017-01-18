@@ -271,7 +271,7 @@ We will first compile a special version of NAMD needed for the fwd_rev
 phase...
 
 How to compile for Stampede:
-A tarball of the NAMD source code is located in the SEEKR/namd_compile directory.
+A tarball of the NAMD source code is located in the SEEKR/namd directory.
 
 Create a directory named, say, namd_compile. Then 'cd' into it. From here, run:
 
@@ -282,11 +282,10 @@ Then unpack it with tar -xzf NAMD_CVS-2015-11-02_Source.tar.gz
 Now you will copy some code files from the same folder into your source folder
 using these commands:
 
-cp /home1/02520/heyneman/namd_compile/gauss.C NAMD_CVS-2015-11-02_Source/src/
-cp /home1/02520/heyneman/namd_compile/eigeng.c NAMD_CVS-2015-11-02_Source/src/
-cp /home1/02520/heyneman/namd_compile/TclCommands.C
-NAMD_CVS-2015-11-02_Source/src/
-cp /home1/02520/heyneman/namd_compile/TclVec.C NAMD_CVS-2015-11-02_Source/src/
+cp /(path to)/SEEKR/namd/gauss.C NAMD_CVS-2015-11-02_Source/src/.
+cp /(path to)/SEEKR/namd/eigeng.c NAMD_CVS-2015-11-02_Source/src/.
+cp /(path to)/SEEKR/namd/namd/TclCommands.C NAMD_CVS-2015-11-02_Source/src/.
+cp /(path to)/SEEKR/namd/TclVec.C NAMD_CVS-2015-11-02_Source/src/.
 
 This will overwrite the existing TclVec.C and TclCommands.C source files
 because SEEKR requires adaptations of the NAMD code. Trust us... we know what
@@ -295,7 +294,7 @@ we're doing ;)
 Next, copy over the script that you will use to build charmrun, which NAMD
 needs to run on a parallel system like Stampede. Do so using this command:
 
-cp /home1/02520/heyneman/namd_compile/build_namd.bash ./
+cp /(path to)/SEEKR/namd/build_namd.bash ./
 
 View the script if you want, and modify the variables at the top as you see
 fit. The $WORKDIR variable is where the program is downloaded and compiled.
@@ -307,9 +306,9 @@ bash build_namd.bash
 This script will probably run for a long time (about an hour). In fact, if it
 stops instantly, check the output for errors because it probably didn't work,
 even if it says it worked. If you have trouble, try copying the charm-6.7.0
-tarball from Sasha's directory:
+tarball from the SEEKR/namd directory:
 
-cp /home1/02520/heyneman/namd_compile/charm-6.7.0.tar $WORK/charm-6.7.0-verbs-linux-x86_64-iccstatic
+cp /(path to)/SEEKR/namd/charm-6.7.0.tar $WORK/charm-6.7.0-verbs-linux-x86_64-iccstatic
 
 Then run this command:
 
@@ -347,19 +346,18 @@ Set up build directory and compile:
 
 This last step is likely to take a long time. (about 15 minutes)
 
-Copy the mpiexec program from Sasha's directory to a location of your choice.
+Copy the mpiexec program from the namd directory to a location of your choice.
 Your home directory is fine:
 
-cp /home1/02520/heyneman/namd_lv/mpiexec $HOME
+cp /(path to)/SEEKR/namd/mpiexec $HOME
 
 The program that we use to control jobs on the supercomputer is called control.py. Make sure that control.py exists in your home directory on Stampede.
 
-Control.py requires you to define the environment variables "NAMD_SEEKR", "CHARM_SEEKR", and "MPIEXEC" that reflect the paths to the software you just compiled.
+the program we will use to run calculations on the supercomputer, control.py, requires you to define the environment variables "NAMD_SEEKR", "CHARM_SEEKR", and "MPIEXEC" that reflect the paths to the software you just compiled.
 
 To do this, in your home directory, edit the .bashrc file: "vi .bashrc" 
  
-add the following lines, changint the path to reflect where the special build
-is installed
+add the following lines, changing the path to reflect where the special build is installed
 export NAMD_SEEKR="/path/to/new/compile/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/namd2"
 export CHARM_SEEKR="/path/to/new/compile/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/charmrun"
 export MPIEXEC="/path/to/mpiexec"
@@ -388,9 +386,7 @@ submit, resubmit, check, prep, etc...
 
 The "anchor" category takes a comma-separated series of anchor indeces to launch. These correspond to the first number in the the directories in the tryp/ folder. Commas delineate numbers and dashes allow one to specify ranges of numbers. One may also use the "all" keyword to launch all the anchors in this directory.
 
-The "stage" category specifies which stage to launch. So far, only "ens_equil" and "fwd_rev" are allowed stages. (But as of the time of this writing, the "fwd_rev" option has undergone extensive modifications and does not function properly. We will need to submit the fwd_rev stage in a different manner for the time being.)  
-
-(NOTE TO SELF: Add this description and additional information to the README)
+The "stage" category specifies which stage to launch. So far, only "ens_equil" and "fwd_rev" are allowed stages.  
 
 Now cd in anchor 4, then md/, then ens_equil/. You will see four files. Two colvar files that specify information about the umbrella sampling, a NAMD input file, and a submission file, perhaps named something like: "ens_equil256_1.submit"
 
@@ -409,13 +405,8 @@ You can also change other information about the submission at this time if you d
 
 sbatch ens_equil256_1.submit
 
-Of course, if your submission script has a different name, you'll have to change the command above. Assuming that all is well with your stampede allocation and the submission file, the job should be submitted to the queue. You can check on it by typing: "showq -u". You might think of using the 'grep' command to filter only lines containing your username. For instance, you can put the following into your ~/.profile file on Stampede:
+Of course, if your submission script has a different name, you'll have to change the command above. Assuming that all is well with your stampede allocation and the submission file, the job should be submitted to the queue. You can check on it by typing: "showq -u". 
 
-alias qstat="showq | grep $USER"
-
-Then source the script with this command:
-
-source ~/.profile
 
 Your job will only run for 10 minutes, but a true umbrella sampling job should run for much more time. In fact, you will likely need to run several different submissions. To resubmit the jobs, the "resubmit" argument for control.py can be used. Use the following command to see the progress of your umbrella sampling:
 
@@ -490,14 +481,10 @@ catdcd anchor_3*/md/ens_equil/ens_equil_0_*.dcd
 
 This will show you how many frames are in each trajectory file. This command was just applied to anchor 3, try it with the other anchors.
 
-Copy the mpiexec program from Sasha's directory to a location of your choice. Your home directory is fine:
-
-cp /home1/02520/heyneman/namd_lv/mpiexec $HOME
-
 Now, it's time to submit the forward-reverse stage job. Run the following command using control.py:
 **From the trypsin_project_directory
 
-python /path/to/control.py -p 64 -nr 16 -t 12:00:00 submit all fwd_rev
+python /path/to/SEEKR/bin/control.py -p 64 -nr 16 -t 12:00:00 submit all fwd_rev
 
 Of course, replace /path/to/control.py with the path to the control.py SEEKR program. The '-p' option will request 64 processors. If you find that you can perform calculations more efficiently with a different number of processors, you can change this number. The '-nr' option defines the number of replicas, that is, the number of concurrent fwd-rev stage jobs running at once. The number of processors per replica is equal to (number of processors / number of replicas). The '-t' option specifies the amount of time to run in hours:minutes:seconds. Run control.py with the '-h' option to see additional arguments that are available.
 
@@ -564,13 +551,20 @@ The '--skip' and '--number' arguments are used in the computation of error margi
 
 Analyze.py is likely to run for several hours, depending on the '--skip' and '--number' values.
 
-The following command will run analyze.py, sampling 100 error matrices, with the zeroth anchor as the sink state:
+The following command will run analyze.py for an on rate calculation, sampling 100 error matrices, with the zeroth anchor as the sink state:
 
-python /path/to/seekr/analyze.py -m milestones.xml -b 0 --skip 100 --number 1000
+python /path/to/seekr/analyze.py -m milestones.xml -b 0 --skip 100 --number 1000 --on
 
 When complete, it will print out a k-on and other useful information.
 
 To see the free energy profile, run the following command:
 
 python ~/seekr/analyze.py --free_energy -m milestones.xml -b 0 --skip 100 --number 1000
+
+Use the -h option of analyze.py for help and to wiew all the possible commands.
+
+For further analysis, there is a collection of scripts in the SEEKR/tools/analysis/ directory.
+
+ 
+
 
