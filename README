@@ -24,6 +24,7 @@ Instructions
 
 SEEKR is designed to be run on Linux. Obtain SEEKR by cloning the Git repository on github
 
+
 git clone https://github.com/nbcrrolls/SEEKR.git
 
 Or, go to the URL https://github.com/nbcrrolls/SEEKR and click the "Clone or download" button and save to a place in your computer.

@@ -665,7 +665,6 @@ if sys_params['md']:
 
 #print "md_settings:", md_settings
 
-
 if sys_params['bd']:
   
   bd_receptor_dry_pqr=parser.get_structure('bd_receptor_dry_pqr', sys_params['bd_rec_pqr_filename'], pqr=True)
@@ -749,6 +748,7 @@ other_necessary_files={
   'la.tcl':'/path/to/la.tcl',
   'etc':'',
 }
+
 
 # write program paths to a pickle
 #print 'namd_special', program_paths['namd_special']

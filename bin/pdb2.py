@@ -937,13 +937,13 @@ class Test_pdb_functions(unittest.TestCase):
 
 if __name__=="__main__":
   print "Now running unit tests for pdb2.py"
-  test_struct1_pdb_filename = 'pdb2_test/adi_dry.pdb' # an alanine dipeptide
-  test_struct2_pdb_filename = 'pdb2_test/tropc_wet.pdb' # troponin C solvated in H2O
-  test_struct3_pdb_filename = 'pdb2_test/cal-2hty-tetra.pdb'
-  test_struct1_pqr_filename = 'pdb2_test/tami.pqr'
-  test_struct2_pqr_filename = 'pdb2_test/tropc_dry.pqr'
-  test_struct3_pqr_filename = 'pdb2_test/cal-2hty-tetra.pqr'
-  test_struct1_pqrxml_filename = 'pdb2_test/tami.pqrxml'
+  test_struct1_pdb_filename = '../test/adi_dry.pdb' # an alanine dipeptide
+  test_struct2_pdb_filename = '../test/tropc_wet.pdb' # troponin C solvated in H2O
+  test_struct3_pdb_filename = '../test/cal-2hty-tetra.pdb'
+  test_struct1_pqr_filename = '../test/tami.pqr'
+  test_struct2_pqr_filename = '../test/tropc_dry.pqr'
+  test_struct3_pqr_filename = '../test/cal-2hty-tetra.pqr'
+  test_struct1_pqrxml_filename = '../test/tami.pqrxml'
   test_struct1_pdb = loadpdb(test_struct1_pdb_filename)
   test_struct2_pdb = loadpdb(test_struct2_pdb_filename)
   test_struct3_pdb = loadpdb(test_struct3_pdb_filename)

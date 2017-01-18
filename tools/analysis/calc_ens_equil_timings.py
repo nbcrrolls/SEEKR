@@ -15,6 +15,7 @@ def extract_timings(output_filenames):
   #timing_lines=[]
   #timings=[]
   #times=[]
+  total_steps=0
   total_time= 0.0
   for filename in output_filenames:
     print "Extracting data from", filename

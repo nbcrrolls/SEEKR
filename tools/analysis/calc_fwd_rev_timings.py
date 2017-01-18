@@ -10,15 +10,16 @@ Calculate an estimate of the length of fwd_rev simulation (in ns)
 import string, re, glob
 
 TIMINGS_COMPILE= re.compile('TIMING:')
-OUTPUT_GLOB='fwd_rev*.out.*'
+OUTPUT_GLOB='fwd_rev1.out.*'
 def extract_timings(output_filenames):
   #timing_lines=[]
   #timings=[]
   #times=[]
   total_time= 0.0
   total_steps=0
+  time= 0.0
   for filename in output_filenames:
-    print "Extracting data from", filename
+    #print "Extracting data from", filename
     for line in open(filename,'r'):
       if re.match(TIMINGS_COMPILE,line):
         line_split=line.split()
@@ -26,7 +27,7 @@ def extract_timings(output_filenames):
         time=float(time.strip())
         steps=re.findall('\d+',line_split[1])[0]
         steps=int(steps.strip())
-    print "steps=" , steps
+    #print "steps=" , steps
     total_time= total_time+time
     total_steps= total_steps+steps
   print "total steps" , total_steps

@@ -38,7 +38,7 @@ def extract_data(filename):
   return(frame, angles)
 
 def main():
-  fig, axs =plt.subplots(2,3, sharex='all',sharey='all')
+  fig, axs =plt.subplots(3,3, sharex='all',sharey='all')
   axs = axs.ravel()
   filenames=sorted(glob.glob(DATA_GLOB))
   print filenames
@@ -49,7 +49,8 @@ def main():
     frame, angle = extract_data(filename)
     axs[i].plot(frame, angle, color='k', linewidth=0.3)
     axs[i].axhline(y=90,color='r', linestyle='--')
-    title_str= str((i*2)+2)+ '$\AA$ Milestone'
+    milestones= [1, 1.5, 2, 3, 4, 6, 8, 10, 12]
+    title_str= str(milestones[i])+ '$\AA$ Milestone'
     axs[i].set_title(title_str)
     axs[i].tick_params(labelsize=8)
     axs[i].set_ylim([0, 200])
@@ -63,7 +64,7 @@ def main():
   plt.suptitle('Ligand Equilibrium Orientations ', fontsize=18)
   plt.tight_layout()
   plt.subplots_adjust(top=0.85, left=0.10, bottom=0.10)
-  plt.savefig('/home/bjagger/images/tryp_paper/lig_angle_plot.png', format='png', dpi=500)
+#  plt.savefig('/home/bjagger/images/tryp_paper/lig_angle_plot.png', format='png', dpi=500)
   plt.show()
 
  

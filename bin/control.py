@@ -38,7 +38,7 @@ except ImportError: # then we cannot use this library of subprocess
 
 #from sys import argv
 from adv_template import Adv_template
-from namd_template import Namd_template
+from namd_inputs import Namd_template
 import namd_inputs
 import re
 from pprint import pprint
@@ -46,25 +46,11 @@ import argparse
 
 namd_inputs_dir = os.path.dirname(os.path.realpath(namd_inputs.__file__))
 
-
-
-#print "namd inputs dir:", namd_inputs_dir
-
-#acct = "TG-CHE060073N"
-#acct = "TG-MCB140064" # My personal acct number
-#queue = "normal"
-#namd_abrams = "/home1/01624/lvotapka/NAMD_2.9_Source/Linux-x86_64-g++/namd2"
-#namd_abrams = "/opt/namd/bin/namd2"
-#namd_abrams = "/home1/01624/lvotapka/NAMD_2.9_Source/Linux-x86_64-g++/namd2"
-#namd_special = '/home1/03918/tg832177/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/namd2' # a special build of NAMD for this purpose
-#charm_special = '/home1/03918/tg832177/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/charmrun' # required for namd_special above
-#mpiexec = '/home1/03918/tg832177/mpiexec'
 acct="NONE"
 
 namd_special=os.environ['NAMD_SEEKR']
 charm_special=os.environ['CHARM_SEEKR']
 mpiexec=os.environ['MPIEXEC']
-
 
 ALL_COMMANDS = ['command','submit','resubmit','check','cancel','modify','prep']
 POSSIBLE_STAGES=['min','temp_equil','ens_equil','fwd_rev',] # the possible stages to search for
@@ -220,6 +206,7 @@ mpirun_rsh -export \
 
 # Stampede submission parameters
 min_params = {
+
 'procs':DEFAULT_NUM_PROCS,'time_str':'12:00:00', 'template':stampede_submit_template, 'acct': "acct", 'queue':'normal',
 }
 
@@ -621,6 +608,7 @@ class Stage():
     elif task.startswith("command"):
       cmd = ' '.join(task.split()[1:])
       print "      now executing: '%s' in stage: %s" % (cmd, self.name)
+
       #submit_stdout = self.command(cmd)
       #print "      result:", submit_stdout
 
@@ -665,6 +653,7 @@ def new_namd_output(srcparams, stage, next_num, prev_num, firsttimestep):
  # srcparams=pickle.load(open(srcfile,'r+b'))
   srcparams['firsttimestep']=firsttimestep
   srcparams['inpdir']=''
+
   srcparams['inpfilename']='%s_0_%d' % (stage, prev_num)
   srcparams['outdir']=''
   srcparams['outfilename']='%s_0_%d' % (stage, next_num)

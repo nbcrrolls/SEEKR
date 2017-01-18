@@ -657,7 +657,7 @@ class Test_md(unittest.TestCase):
     return
 
   def test_leap_from_sample(self):
-    testfile_name = '/usr/tmp/testfile.leaprc'
+    testfile_name = '/tmp/testfile.leaprc'
     testfile_contents = '''source leaprc.ff03.r1\nsource leaprc.gaff\nloadoff /extra/banzai/lvotapka/projects/seekr/tropc_files/Ca2.lib\nloadoff /extra/banzai/lvotapka/projects/seekr/trypsin_files/benzamidine.lib\nloadamberparams /extra/banzai/lvotapka/projects/seekr/trypsin_files/benzamidine.frcmod\nholo = loadpdb input.pdb\nsaveamberparm holo mine.prmtop mine.inpcrd\nsavepdb holo mine.pdb\ncheck holo\ncharge holo\nquit'''
     testfile = open(testfile_name,'w')
     testfile.writelines(testfile_contents)

@@ -28,6 +28,10 @@ Priority:
 
 - Change default executable locations (Browndye, APBS, Inputgen, 
 
+- Warning messages if replica numbers are changed between fwd-rev resubmissions.
+
+
+
 
 Recommended:
 
@@ -87,5 +91,7 @@ Completed:
 - Eliminate control.py's printing of "executing command: sbatch", it isn't currently. *
 
 - Make resubmits of the fwd_rev stage write standard output to new files. (change the submission script generator in control.py) *
+
+- Convergence analysis tools: see whether the umbrella sampling statistics have converged. (done)
 
 

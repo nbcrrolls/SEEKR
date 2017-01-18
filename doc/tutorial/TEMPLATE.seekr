@@ -122,6 +122,8 @@ fwd_rev_type SOMETHING # can be 'protein', 'membrane'
 fwd_rev_dcdfreq SOMETHING
 fwd_rev_restart_freq SOMETHING
 fwd_rev_run_freq SOMETHING
+fwd_rev_launches_per_config SOMETHING # how many members of the distribution to launch per position. The velocity is re-initiated with each of these.
+fwd_rev_frame_chunk_size SOMETHING # how many frames to submit to the replicas at any one time. If this number is too large (>10000), then memory overflows can occur.
 
 
 
@@ -133,6 +135,7 @@ bd_threads SOMETHING
 bd_prods_per_anchor SOMETHING
 #bd_calc_electrostatics SOMETHING
 bd_rec_pqr_filename SOMETHING
+
 inputgen_executable SOMETHING
 ##############################################################
 # APBS Parameters
