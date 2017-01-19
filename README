@@ -32,6 +32,22 @@ Or, go to the URL https://github.com/nbcrrolls/SEEKR and click the "Clone or dow
 From there, open seekr/doc/manual.txt to get started.
 
 
+SEEKR is designed to run on Linux and requires the installation of the following software to function properly:
+
+ - NAMD
+ - BrownDye
+ - LEaP (when using the Amber forcefield)
+ - APBS
+ - PBS (when on a supercomputer that uses PBS)
+ - SLURM (when on a supercomputer that uses SLURM)
+
+In addition to the following nonstandard Python libraries:
+ - MDAnalysis
+ - numpy
+ - scipy
+
+All these programs/libraries must be installed and functional before using SEEKR. Please consult the manuals for these programs/libraries for installation and usage instructions.
+
 Files
 -----
 
