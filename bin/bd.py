@@ -526,6 +526,7 @@ def write_browndye_input(pqrs,settings,criteria,work_dir='.',browndye_bin='', st
   pqrxmls = []
   for pqr in pqrs: # for each molecule in pqr format
     prefix = pqr.struct_id # name of the molecule
+    print "PREFIX", prefix
     pqrfile = os.path.join(work_dir, prefix+'.pqr')
     pqr.save(pqrfile,pqr=True,endmdl=False)
     print "pqrfile:", pqrfile
@@ -642,6 +643,9 @@ def main(settings):
   lig_config = lig_configs[0] # get the first config of the ligand
   lig_center = pdb.center_of_mass(lig_config)
   pqrs = [copy.deepcopy(rec_struct), copy.deepcopy(lig_config)]
+  print "PQR1 ID", pqrs[1].struct_id
+  pqrs[1].struct_id='bd_ligand'
+  print "PQR1 ID", pqrs[1].struct_id
   b_surface_path = settings['b_surface_path']
   if not os.path.exists(b_surface_path): os.mkdir(b_surface_path)
   b_surface_criteria = []
@@ -672,6 +676,7 @@ def main(settings):
     print "bd_file_path:", bd_file_path
 
     pqrs = [copy.deepcopy(rec_struct), copy.deepcopy(lig_config)]
+    pqrs[1].struct_id='bd_ligand'
     #lig_center = pdb.center_of_mass(lig_config)
     bd_needed = True
 

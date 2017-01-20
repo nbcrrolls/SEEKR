@@ -60,16 +60,45 @@ default_inputgen_settings = {
   'cfac':'4.0',
 }
 
+
 def make_apbs_input_using_inputgen(inputgen_filename, pqr_filename, fadd=60, cfac=4.0, gmemceil=64000, resolution=0.5, ionic_str=0.15):
   """makes an apbs input file given a pqr file & other parameters. See Inputgen.py in PDB2PQR documentation for descriptions of other arguments"""
-  runstring = "python %s --potdx --fadd=%s --cfac=%s --space=%s --gmemceil=%s --istrng=%s %s" % (inputgen_filename, fadd, cfac, resolution, gmemceil, ionic_str, pqr_filename, )
-  print "Now creating APBS input file using command:", runstring
-  os.system(runstring)
+  pqr_basename= os.path.basename(pqr_filename)
   #pre_ext = '.'.join(pqr_filename.split('.')[0:-1]) # the part of the filename before the extension
-  pre_ext = pqr_filename
-  input_filename = os.path.join(pre_ext+'.in')
-  print "APBS input_filename", input_filename
+  pqr_abspath=os.path.dirname(os.path.abspath(pqr_filename))
+  #print 'pqr abspath', pqr_abspath
+  pre_ext = (pqr_basename.split('.'))[0]
+  #print "pre_ext", pre_ext
+  runstring = "python %s --potdx --fadd=%s --cfac=%s --space=%s --gmemceil=%s --istrng=%s %s" % (inputgen_filename, fadd, cfac, resolution, gmemceil, ionic_str, pqr_basename, )
+  olddir = os.curdir
+  #print 'curdir', os.curdir
+  os.chdir(os.path.dirname(pqr_filename))
+  #print 'curdir', os.curdir
+  print "Now creating APBS input file using command:", runstring
+  #print 'PWD', os.getcwd()
+  os.system(runstring)
+  os.chdir(olddir)
+  #print 'pqr filename', pqr_filename
+  #pqr_basename= os.path.basename(pqr_filename)
+  #pre_ext = '.'.join(pqr_filename.split('.')[0:-1]) # the part of the filename before the extension
+  #pqr_abspath=os.path.dirname(os.path.abspath(pqr_filename))
+  #print 'pqr abspath', pqr_abspath
+  #pre_ext = (pqr_basename.split('.'))[0]
+  #print "pre_ext", pre_ext
+  input_filename = os.path.join(pqr_abspath+'/'+ pre_ext+'.in')
+  #print "APBS input_filename", input_filename
   return input_filename
+
+#def make_apbs_input_using_inputgen(inputgen_filename, pqr_filename, fadd=60, cfac=4.0, gmemceil=64000, resolution=0.5, ionic_str=0.15):
+#  """makes an apbs input file given a pqr file & other parameters. See Inputgen.py in PDB2PQR documentation for descriptions of other arguments"""
+#  runstring = "python %s --potdx --fadd=%s --cfac=%s --space=%s --gmemceil=%s --istrng=%s %s" % (inputgen_filename, fadd, cfac, resolution, gmemceil, ionic_str, pqr_filename, )
+#  print "Now creating APBS input file using command:", runstring
+#  os.system(runstring)
+#  #pre_ext = '.'.join(pqr_filename.split('.')[0:-1]) # the part of the filename before the extension
+#  pre_ext = pqr_filename
+#  input_filename = os.path.join(pre_ext+'.in')
+#  print "APBS input_filename", input_filename
+#  return input_filename
 
 def scrape_inputfile(input_filename):
   '''NOTE: only takes out the dime, pdime, cglen, and fglen parameters from an APBS input file.'''
@@ -110,7 +139,10 @@ def run_apbs (apbs_filename, input_filename, pqr_filename, std_out="apbs.out"):
   if os.path.abspath(os.path.dirname(pqr_filename)) != os.path.abspath(rundir):
     shutil.copyfile(pqr_filename, os.path.join(rundir,os.path.basename(pqr_filename)))
   pqr_filename = os.path.basename(pqr_filename)
+  #print "pqr filename:", pqr_filename
+  #print "input_filename1", input_filename
   input_filename = os.path.basename(input_filename)
+  #print "input_fielname2", input_filename
   std_out = os.path.basename(std_out)
   runstring = "%s %s > %s" % (apbs_filename, input_filename, std_out) # string to run apbs
   print "running command:", runstring
@@ -160,6 +192,7 @@ def main(pqr_filename,inputgen_settings={},apbs_settings={},fhpd_mode=False):
   # make APBS input file using template (disabled)
   #input_filename
   # make DX grids
+  #print 'INPUT FILENAME', input_filename
   apbs_out=pqr_filename+'.out' # make a default apbs output file
   # use the inputgen-generated file to make our own, more customized file
   apbs_params = scrape_inputfile(input_filename)
@@ -188,7 +221,9 @@ def is_number(s):
 class Test_apbs_functions(unittest.TestCase):
   # several test cases to ensure the functions in this module are working properly
   def test_make_apbs_input_using_inputgen(self): # test whether the apbs input file has been created properly
+    #print 'test pqr filename', test_pqr_filename
     self.APBS_inp = make_apbs_input_using_inputgen(test_inputgen_location, test_pqr_filename) # get file location
+    #print "self.APBS_inp", self.APBS_inp
     fileexists = os.path.exists(self.APBS_inp)
     self.assertTrue(fileexists)
 
