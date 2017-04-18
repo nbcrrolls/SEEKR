@@ -22,7 +22,7 @@ extract_stride SOMETHING
 #Program path information
 ##############################################################
 browndye_bin_dir SOMETHING # the path to the browndye bin
-inputgen_location SOMETHING
+#inputgen_location SOMETHING # already defined as environment variable
 apbs_executable SOMETHING
 
 ##############################################################
@@ -136,7 +136,7 @@ bd_prods_per_anchor SOMETHING
 #bd_calc_electrostatics SOMETHING
 bd_rec_pqr_filename SOMETHING
 
-inputgen_executable SOMETHING
+#inputgen_executable SOMETHING
 ##############################################################
 # APBS Parameters
 ##############################################################
