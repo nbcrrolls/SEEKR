@@ -16,37 +16,68 @@ SEEKR: Simulation-Enabled Estimation of Kinetic Rates
 Introduction
 ------------
 
-SEEKR (http://amarolab.ucsd.edu/seekr/) is a suite of open-source scripts and tools designed to enable researchers to perform multiscale computation of the kinetics of molecular binding, unbinding, and transport using a combination of molecular dynamics, Brownian dynamics, and milestoning theory.
+SEEKR (http://amarolab.ucsd.edu/seekr/) is a suite of open-source scripts and 
+tools designed to enable researchers to perform multiscale computation of the 
+kinetics of molecular binding, unbinding, and transport using a combination 
+of molecular dynamics, Brownian dynamics, and milestoning theory.
 
 
 Instructions
 ------------
 
-SEEKR is designed to be run on Linux. Obtain SEEKR by cloning the Git repository on github
+SEEKR is designed to be run on Linux. Obtain SEEKR by cloning the Git 
+repository on github.
 
 
 git clone https://github.com/nbcrrolls/SEEKR.git
 
-Or, go to the URL https://github.com/nbcrrolls/SEEKR and click the "Clone or download" button and save to a place in your computer.
+Or, go to the URL https://github.com/nbcrrolls/SEEKR and click the "Clone 
+or download" button and save to a place in your computer.
 
 From there, open seekr/doc/manual.txt to get started.
 
+
+SEEKR is designed to run on Linux and requires the installation of the 
+following software to function properly:
+
+ - NAMD
+ - BrownDye
+ - LEaP (when using the Amber forcefield)
+ - APBS
+ - PBS (when on a supercomputer that uses PBS)
+ - SLURM (when on a supercomputer that uses SLURM)
+
+In addition to the following nonstandard Python libraries:
+ - MDAnalysis
+ - numpy
+ - scipy
+
+All these programs/libraries must be installed and functional before using 
+SEEKR. Please consult the manuals for these programs/libraries for 
+installation and usage instructions.
 
 Files
 -----
 
 This is a description of the folders in the base seekr/ directory.
-doc/ - Find detailed information about the installation, usage, tutorials, and troubleshooting of SEEKR in this folder
-test/ - Most of the tests in SEEKR are integrated directly into the scripts, but some tests are run externally, and are included in this directory.
-tools/ - A number of non-essential scripts are included in this directory that may be useful for calculations, preparations, and analysis.
-website/ - a full copy of the SEEKR website
+doc/ - Find detailed information about the installation, usage, tutorials, and 
+  troubleshooting of SEEKR in this folder.
+test/ - Most of the tests in SEEKR are integrated directly into the scripts, 
+  but some tests are run externally, and are included in this directory.
+namd/ - This folder contains files necessary for compiling the special build of NAMD used 
+  by SEEKR.
+tools/ - A number of non-essential scripts are included in this directory that 
+  may be useful for calculations, preparations, and analysis.
+website/ - This folder contains a full copy of the SEEKR website.
 
 
 Getting Help
 ------------
 
-Need help? Check out the documentation at http://amarolab.ucsd.edu/seekr/ or that is located in seekr/doc/manual.txt
+Need help? Check out the documentation at http://amarolab.ucsd.edu/seekr/ or 
+that is located in seekr/doc/manual.txt
 
-Also, you can make comments, submit issues, and talk to real people at the Github site: https://github.com/nbcrrolls/SEEKR.git
+Also, you can make comments, submit issues, and talk to real people at the 
+Github site: https://github.com/nbcrrolls/SEEKR.git
 
 

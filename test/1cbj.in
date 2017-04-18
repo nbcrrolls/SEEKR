@@ -23,7 +23,7 @@ elec
     temp 298.15
     calcenergy total
     calcforce no
-    write pot dx /home/lvotapka/seekr/test/1cbj.pqr
+    write pot dx 1cbj.pqr
 end
-print elecEnergy 1 end
+
 quit
