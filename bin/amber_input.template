@@ -1,0 +1,79 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+{% if $caption %}!  Name $caption
+{% endif %}{% if $date %}!  Date $date
+{% endif %}!  * Generated with the SEEKR Automatic AMBER input file generator by Benjamin R. Jagger
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+ &cntrl
+   ig=-1                           ! Pseudo-random number generator (random seed based on time)
+   imin = $imin,                   ! Minimization (Yes)
+   {% if $imin=='1'%}ntmin = $ntmin,                 ! Minimization Method (Steepest decent/Conjugate gradient)
+   maxcyc = $maxcyc,               ! Maximum number of minimization cycles
+   ncyc = $ncyc
+   {% endif %}cut = $cut,                     ! nonbonded cutoff
+   irest = $irest,
+   {% if $ntx %} ntx = $ntx,
+   {% endif %}
+   ntb = $ntb,
+   {% if $imin != '1' %}ntt= $ntt,
+   gamma_ln = $gamma_ln,
+   tempi = $tempi,
+   temp0 = $temp0,
+{% if $ntc %}   ntc = $ntc,
+{% endif %}{% if $ntf %}   ntf = $ntf,
+{% endif %}   tol = $tol,
+   jfastw= $jfastw,
+   ntb = $ntb,
+{% if $barostat %}   barostat = $barostat,
+{% endif %}{% if $mcbarint %}   mcbaring = $mcbarint,
+{% endif %}{% if $pres0 %}   pres0 = $pres0,
+{% endif %}{% if $taup%}   taup = $taup,
+{% endif %}   ntt = $ntt,
+   dt = $dt,
+   nstlim = $nstlim,
+   ntpr = $ntpr,
+   ntwx = $ntwx,
+   ntwr = $ntwr,
+   iwrap = $iwrap,
+   {% if $ioutfm %}ioutfm = $ioutfm,
+   {% endif %}{% endif %}{% if $ntr >= '1'%}ntr = $ntr,
+   restraint_wt= $restraint_wt,
+   restraintmask = '@$restraint_mask',
+   {% endif %}
+&end
+
+&ewald
+{% if $nfft1 %}nfft1= $nfft1,
+{% endif %}{% if $nfft2 %}nfft2= $nfft
+{% endif %}{% if $nfft3 %}nfft3= $nfft3,
+{% endif %}{% if $dsum %}dsum= $dsum,
+{% endif %}{% if $order %}order= $order,
+{% endif %}
+&end
+ /
+
+{% if $nmropt== '1' %}   nmropt = $nmropt,
+   ntr=$ntr,
+   restraint_wt= $restraint_wt
+   restraint_mask= $restraint_mask,
+{% endif %} {% if $temp_equil == 'yes' %} &wt type = 'TEMP0',
+   istep1 = $istep1,
+   istep2 = $istep2,
+   value1 = $value1,
+   value2 = $value2/
+{% endif %}
+
+ &wt type= 'END' , /
+
+{% if $DISANG %}DISANG= $DISANG,
+{% endif %}{% if $DUMPAVE %}DUMPAVE= $DUMPAVE,
+/
+{% endif %}
+
+   
+      
+
+
+
+
+

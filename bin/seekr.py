@@ -42,6 +42,7 @@ md_time_factor = 2.0 # 2 fs per timestep
 bd_time_factor = 1000.0 # 1000 fs per ps
 
 inp = { # contains default parameters in case they aren't included in the input file
+  'package':'namd',
   'test_mode':False, # reduces the calculation time by restricting input size. Use only for debugging SEEKR
   'LA_src':"../../la.tcl",
   'tcl_script_control':True, # whether the milestoning is controlled by the TCL script versus something else
@@ -211,6 +212,7 @@ inp['ligrot'] = inp['lig_rot']
 inp['recrot'] = inp['rec_rot']
 
 sys_params={ # variables pertinent to the receptor/ligand
+  'package':inp['package'],
   'project_name':inp['project_name'],
   'rootdir':inp['rootdir'],
   'lig_pdb_filename':inp['lig_pdb_filename'],
@@ -229,7 +231,7 @@ sys_params={ # variables pertinent to the receptor/ligand
 
 }
 
-#define program path variables
+#define program path variables-- DEPRICATED
 
 #program_paths={# variables that define paths to programs used by SEEKR
 #  'namd_special':inp['namd_special'],
@@ -549,122 +551,240 @@ config_dirlist, md_file_paths, bd_file_paths, raw_milestone_list=filetree.main(f
 site_list = milestones.split_milestones_by_site(raw_milestone_list)
 milestones.write_milestone_file(site_list, milestone_settings['milestone_filename'], master_temperature, md_time_factor, bd_time_factor)
 
-if boolean(inp['ens_equil_colvars']):
-  ens_equil_colvars = 'on'
-else:
-  ens_equil_colvars = 'off'
-
-if sys_params['md']:
-  md_settings={ # settings for the md module
-    #'milestone_list':milestone_list,
-    'milestone_pos_rot_list':milestone_pos_rot_list,
-    'raw_milestone_list':raw_milestone_list,
-    'configs':wet_configs,
-    'receptor_type':inp['receptor_type'],
-    'ff':inp['ff'], # the forcefield to use
-    'watermodel':inp['watermodel'],
-    'cell_shape':inp['cell_shape'],
-
-    'amber_settings': {
-      'leap_preload_commands':inp['leap_preload_commands'].split(','),
-      'leap_postload_commands':inp['leap_postload_commands'].split(','),
-      'leap_program':inp['leap_program'],
-      'sample_leap_file':inp['sample_leap_file'],
-    },
-    'charmm_settings': {
-      'parameters':inp['charmm_parameters'].split(','),
-      'insert_index':insert_index,
-      'recpsf':inp['rec_psf_filename'],
-      'ligpsf':inp['lig_psf_filename'],
-      'ignore_psf':boolean(inp['ignore_psf'])
-    },
-    'master_temperature':master_temperature,
-    'ligrange':inp['ligrange'],
-    'quat_hedron':inp['hedron'],
-    'min':boolean(inp['min']), # are we running minimizations at all
-    'min_settings':{
-      'constrained':inp['min_constrained'], # list what parts of the structure will be constrained during minimizations, including "ligand" (values taken from tcl['lig_indeces'], above), "receptor" (values taken from tcl['rec_indeces']), or a list of all indeces in the pdb file you want constrained
-      'restrained':inp['min_restrained'],
-      'restrained_force':inp['min_restrained_force'],
-      'num_steps':inp['min_num_steps'], # number of minimization steps
-      #'out_freq':inp['min_out_freq'],
-      'ensemble':inp['min_ensemble'], # irrelevant for minimizations, but necessary for the program
-      'namd_settings':{'numsteps':inp['min_num_steps'],'temperature':master_temperature, 'extendedsystem':inp['rec_xsc_filename']},
-
-    },
-    'temp_equil':boolean(inp['temp_equil']), # whether we actually run equilibration
-    'temp_equil_settings':{
-      'constrained':inp['temp_equil_constrained'], # same as above
-      'restrained':inp['temp_equil_restrained'],
-      'restrained_force':inp['temp_equil_restrained_force'],
-      'start_temp':master_temperature,
-      'peak_temp':float(inp['temp_equil_peak_temp']),	# These define how the temperature will be adjusted up and then back
-      'end_temp':master_temperature,
-      'temp_increment':float(inp['temp_equil_temp_increment']),
-      'temp_step_time':float(inp['temp_equil_num_steps']), # number of steps per temperature increment
-      'ensemble':inp['temp_equil_ensemble'],
-      'namd_settings':{'numsteps':inp['temp_equil_num_steps']},
-    },
-    'ens_equil':boolean(inp['ens_equil']), # whether we will run constrained runs for ensemble equilibrations
-    'ensemble_equil_settings':{
-      'constrained':inp['ens_equil_constrained'],
-      'restrained':inp['ens_equil_restrained'], # whether these structures are harmonically restrained
-      'restrained_force':inp['ens_equil_restrained_force'],
-      'colvars':boolean(inp['ens_equil_colvars']), # whether collective variables should be imposed between the ligand and the receptor. If set to True, 'constrained' list above must be empty.
-      'colvar_settings' : {
-        'colvar':inp['ens_equil_colvar_sel'], # list of what parts of the system will have collective variables imposed. Options include 'ligand', 'receptor', 'water', 'relative' (for relative colvars between ligand/receptor), or a list of all indeces in pdb to be constrained
-        #'colvar_type':inp['ens_equil_colvar_type'],
-        'colvar_force':inp['ens_equil_colvar_force'], # kcal/mol
-        'colvarstrajfrequency':inp['ens_equil_colvarstrajfrequency'],
-        'colvarsrestartfrequency':inp['ens_equil_colvarsrestartfrequency'],
-        'colvar_ligand_indeces':inp['ens_equil_colvar_ligand_indeces'], #map(int, inp['ens_equil_colvar_ligand_indeces'].split(',')),
-        'colvar_receptor_indeces':inp['ens_equil_colvar_receptor_indeces'], #map(int, inp['ens_equil_colvar_receptor_indeces'].split(',')),
-
+if inp['package'] == 'namd':
+  if boolean(inp['ens_equil_colvars']):
+    ens_equil_colvars = 'on'
+  else:
+    ens_equil_colvars = 'off'
+  
+  if sys_params['md']:
+    md_settings={ # settings for the md module
+      #'milestone_list':milestone_list,
+      'milestone_pos_rot_list':milestone_pos_rot_list,
+      'raw_milestone_list':raw_milestone_list,
+      'configs':wet_configs,
+      'receptor_type':inp['receptor_type'],
+      'ff':inp['ff'], # the forcefield to use
+      'watermodel':inp['watermodel'],
+      'cell_shape':inp['cell_shape'],
+  
+      'amber_settings': {
+        'leap_preload_commands':inp['leap_preload_commands'].split(','),
+        'leap_postload_commands':inp['leap_postload_commands'].split(','),
+        'leap_program':inp['leap_program'],
+        'sample_leap_file':inp['sample_leap_file'],
       },
-      'ensemble':inp['ens_equil_ensemble'],
-      #'num_steps':'10000', # number of steps to calculate for each ensemble
-      'namd_settings':{'numsteps':ens_equil_len,'colvars':ens_equil_colvars,'temperature':master_temperature, 'dcdfreq':dcd_freq,'xstfreq':dcd_freq,'restartfreq':dcd_freq,'outputenergies':dcd_freq, 'outputtiming':dcd_freq, 'veldcdfreq':dcd_freq, 'colvarsconfig':colvars.COLVAR_SCRIPT_NAME},
-    },
+      'charmm_settings': {
+        'parameters':inp['charmm_parameters'].split(','),
+        'insert_index':insert_index,
+        'recpsf':inp['rec_psf_filename'],
+        'ligpsf':inp['lig_psf_filename'],
+        'ignore_psf':boolean(inp['ignore_psf'])
+      },
+      'master_temperature':master_temperature,
+      'ligrange':inp['ligrange'],
+      'quat_hedron':inp['hedron'],
+      'min':boolean(inp['min']), # are we running minimizations at all
+      'min_settings':{
+        'constrained':inp['min_constrained'], # list what parts of the structure will be constrained during minimizations, including "ligand" (values taken from tcl['lig_indeces'], above), "receptor" (values taken from tcl['rec_indeces']), or a list of all indeces in the pdb file you want constrained
+        'restrained':inp['min_restrained'],
+        'restrained_force':inp['min_restrained_force'],
+        'num_steps':inp['min_num_steps'], # number of minimization steps
+        #'out_freq':inp['min_out_freq'],
+        'ensemble':inp['min_ensemble'], # irrelevant for minimizations, but necessary for the program
+        'namd_settings':{'numsteps':inp['min_num_steps'],'temperature':master_temperature, 'extendedsystem':inp['rec_xsc_filename']},
+  
+      },
+      'temp_equil':boolean(inp['temp_equil']), # whether we actually run equilibration
+      'temp_equil_settings':{
+        'constrained':inp['temp_equil_constrained'], # same as above
+        'restrained':inp['temp_equil_restrained'],
+        'restrained_force':inp['temp_equil_restrained_force'],
+        'start_temp':master_temperature,
+        'peak_temp':float(inp['temp_equil_peak_temp']),	# these define how the temperature will be adjusted up and then back
+        'end_temp':master_temperature,
+        'temp_increment':float(inp['temp_equil_temp_increment']),
+        'temp_step_time':float(inp['temp_equil_num_steps']), # number of steps per temperature increment
+        'ensemble':inp['temp_equil_ensemble'],
+        'namd_settings':{'numsteps':inp['temp_equil_num_steps']},
+      },
+      'ens_equil':boolean(inp['ens_equil']), # whether we will run constrained runs for ensemble equilibrations
+      'ensemble_equil_settings':{
+        'constrained':inp['ens_equil_constrained'],
+        'restrained':inp['ens_equil_restrained'], # whether these structures are harmonically restrained
+        'restrained_force':inp['ens_equil_restrained_force'],
+        'colvars':boolean(inp['ens_equil_colvars']), # whether collective variables should be imposed between the ligand and the receptor. if set to true, 'constrained' list above must be empty.
+        'colvar_settings' : {
+          'colvar':inp['ens_equil_colvar_sel'], # list of what parts of the system will have collective variables imposed. options include 'ligand', 'receptor', 'water', 'relative' (for relative colvars between ligand/receptor), or a list of all indeces in pdb to be constrained
+          #'colvar_type':inp['ens_equil_colvar_type'],
+          'colvar_force':inp['ens_equil_colvar_force'], # kcal/mol
+          'colvarstrajfrequency':inp['ens_equil_colvarstrajfrequency'],
+          'colvarsrestartfrequency':inp['ens_equil_colvarsrestartfrequency'],
+          'colvar_ligand_indeces':inp['ens_equil_colvar_ligand_indeces'], #map(int, inp['ens_equil_colvar_ligand_indeces'].split(',')),
+          'colvar_receptor_indeces':inp['ens_equil_colvar_receptor_indeces'], #map(int, inp['ens_equil_colvar_receptor_indeces'].split(',')),
+  
+        },
+        'ensemble':inp['ens_equil_ensemble'],
+        #'num_steps':'10000', # number of steps to calculate for each ensemble
+        'namd_settings':{'numsteps':ens_equil_len,'colvars':ens_equil_colvars,'temperature':master_temperature, 'dcdfreq':dcd_freq,'xstfreq':dcd_freq,'restartfreq':dcd_freq,'outputenergies':dcd_freq, 'outputtiming':dcd_freq, 'veldcdfreq':dcd_freq, 'colvarsconfig':colvars.colvar_script_name},
+      },
+  
+      'prod_settings':{
+        'constrained':inp['fwd_rev_constrained'],
+  
+        #'num_steps':'100000',
+        'ensemble':inp['fwd_rev_ensemble'],
+        'type':inp['fwd_rev_type'], # can be 'protein', 'membrane'
+        'namd_settings':{'numsteps':'','tclforces':'on','tclforcesscript':inp['tclforcesscript']},
+      },
+      'fwd_rev_settings':{
+        'constrained':inp['fwd_rev_constrained'],
+        'ensemble':inp['fwd_rev_ensemble'],
+        'type':inp['fwd_rev_type'], # can be 'protein', 'membrane'
+        'namd_settings':{'tclforces':'on','tclforcesscript':inp['tclforcesscript']},
+        'dcdfreq':inp['fwd_rev_dcdfreq'],
+        'restart_freq':inp['fwd_rev_restart_freq'],
+        'run_freq':inp['fwd_rev_run_freq'],
+        'xstfreq':inp['fwd_rev_dcdfreq'],
+        'extract_xst':inp['extract_xst'],
+        'extract_stride':extract_stride, # the number of trajectories to extract from the ensemble simulations
+        'extract_first':number_of_ens_equil_frames_skipped, # the number of frames to skip from the beginning of the ensemble trajectory
+        'max_num_steps':inp['fwd_rev_max_num_steps'],
+        'launches_per_config':inp['fwd_rev_launches_per_config'],
+        'frame_chunk_size':inp['fwd_rev_frame_chunk_size']
+      },
+      'md_file_paths':md_file_paths, # file paths to the md directories in the anchor file
+      'prods_per_anchor':1, # number of simulations per anchor
+      #'one_equil_per_anchor':true, # true: all prod simulations will be started from portions of one single equilibration. false: all 50 productions will have their own equilibration
+    }
+  
+  
+    md_settings['absolute_mode'] = str(absolute_mode)
+    md_settings['temp_equil_settings']['temp_range'] = np.concatenate((np.arange(md_settings['temp_equil_settings']['start_temp'],md_settings['temp_equil_settings']['peak_temp'],md_settings['temp_equil_settings']['temp_increment']), \
+      np.arange(md_settings['temp_equil_settings']['peak_temp'],md_settings['temp_equil_settings']['end_temp'],-md_settings['temp_equil_settings']['temp_increment']), [md_settings['temp_equil_settings']['end_temp']]))
+  
+    md_settings_all = dict(md_settings.items() + sys_params.items() + tcl.items())
+    md.main(md_settings_all)
+  
+  #print "md_settings:", md_settings
 
-    'prod_settings':{
-      'constrained':inp['fwd_rev_constrained'],
-
-      #'num_steps':'100000',
-      'ensemble':inp['fwd_rev_ensemble'],
-      'type':inp['fwd_rev_type'], # can be 'protein', 'membrane'
-      'namd_settings':{'numsteps':'','tclforces':'on','tclforcesscript':inp['tclforcesscript']},
-    },
-    'fwd_rev_settings':{
-      'constrained':inp['fwd_rev_constrained'],
-      'ensemble':inp['fwd_rev_ensemble'],
-      'type':inp['fwd_rev_type'], # can be 'protein', 'membrane'
-      'namd_settings':{'tclforces':'on','tclforcesscript':inp['tclforcesscript']},
-      'dcdfreq':inp['fwd_rev_dcdfreq'],
-      'restart_freq':inp['fwd_rev_restart_freq'],
-      'run_freq':inp['fwd_rev_run_freq'],
-      'xstfreq':inp['fwd_rev_dcdfreq'],
-      'extract_xst':inp['extract_xst'],
-      'extract_stride':extract_stride, # the number of trajectories to extract from the ensemble simulations
-      'extract_first':number_of_ens_equil_frames_skipped, # the number of frames to skip from the beginning of the ensemble trajectory
-      'max_num_steps':inp['fwd_rev_max_num_steps'],
-      'launches_per_config':inp['fwd_rev_launches_per_config'],
-      'frame_chunk_size':inp['fwd_rev_frame_chunk_size']
-    },
-    'md_file_paths':md_file_paths, # file paths to the MD directories in the anchor file
-    'prods_per_anchor':1, # number of simulations per anchor
-    #'one_equil_per_anchor':True, # True: all prod simulations will be started from portions of one single equilibration. False: all 50 productions will have their own equilibration
-  }
-
-
-  md_settings['absolute_mode'] = str(absolute_mode)
-  md_settings['temp_equil_settings']['temp_range'] = np.concatenate((np.arange(md_settings['temp_equil_settings']['start_temp'],md_settings['temp_equil_settings']['peak_temp'],md_settings['temp_equil_settings']['temp_increment']), \
-    np.arange(md_settings['temp_equil_settings']['peak_temp'],md_settings['temp_equil_settings']['end_temp'],-md_settings['temp_equil_settings']['temp_increment']), [md_settings['temp_equil_settings']['end_temp']]))
-
-  md_settings_all = dict(md_settings.items() + sys_params.items() + tcl.items())
-  md.main(md_settings_all)
-
-#print "md_settings:", md_settings
-
+if inp['package'] == 'amber':
+  if boolean(inp['ens_equil_colvars']):
+    ens_equil_colvars = 'on'
+  else:
+    ens_equil_colvars = 'off'
+  
+  if sys_params['md']:
+    md_settings={ # settings for the md module
+      #'milestone_list':milestone_list,
+      'milestone_pos_rot_list':milestone_pos_rot_list,
+      'raw_milestone_list':raw_milestone_list,
+      'configs':wet_configs,
+      'receptor_type':inp['receptor_type'],
+      'ff':inp['ff'], # the forcefield to use
+      'watermodel':inp['watermodel'],
+      'cell_shape':inp['cell_shape'],
+  
+      'amber_settings': {
+        'leap_preload_commands':inp['leap_preload_commands'].split(','),
+        'leap_postload_commands':inp['leap_postload_commands'].split(','),
+        'leap_program':inp['leap_program'],
+        'sample_leap_file':inp['sample_leap_file'],
+      },
+      'charmm_settings': {
+        'parameters':inp['charmm_parameters'].split(','),
+        'insert_index':insert_index,
+        'recpsf':inp['rec_psf_filename'],
+        'ligpsf':inp['lig_psf_filename'],
+        'ignore_psf':boolean(inp['ignore_psf'])
+      },
+      'master_temperature':master_temperature,
+      'ligrange':inp['ligrange'],
+      'quat_hedron':inp['hedron'],
+      'min':boolean(inp['min']), # are we running minimizations at all
+      'min_settings':{
+        'constrained':inp['min_constrained'], # list what parts of the structure will be constrained during minimizations, including "ligand" (values taken from tcl['lig_indeces'], above), "receptor" (values taken from tcl['rec_indeces']), or a list of all indeces in the pdb file you want constrained
+        'restrained':inp['min_restrained'],
+        'restrained_force':inp['min_restrained_force'],
+        'maxcyc':inp['min_num_steps'], # number of minimization steps
+        #'out_freq':inp['min_out_freq'],
+        'ensemble':inp['min_ensemble'], # irrelevant for minimizations, but necessary for the program
+        'ambersim_settings':{'numsteps':inp['min_num_steps'],'temp0':master_temperature},
+  
+      },
+      'temp_equil':boolean(inp['temp_equil']), # whether we actually run equilibration
+      'temp_equil_settings':{
+        'constrained':inp['temp_equil_constrained'], # same as above
+        'restrained':inp['temp_equil_restrained'],
+        'restrained_force':inp['temp_equil_restrained_force'],
+        'temp0':master_temperature,
+        'tempi':'0',
+        'peak_temp':float(inp['temp_equil_peak_temp']),	# these define how the temperature will be adjusted up and then back
+        'end_temp':master_temperature,
+        'temp_increment':float(inp['temp_equil_temp_increment']),
+        'temp_step_time':float(inp['temp_equil_num_steps']), # number of steps per temperature increment
+        'ensemble':inp['temp_equil_ensemble'],
+        'ambersim_settings':{'nstlim':inp['temp_equil_num_steps'], 'production':'TRUE'},
+      },
+      'ens_equil':boolean(inp['ens_equil']), # whether we will run constrained runs for ensemble equilibrations
+      'ensemble_equil_settings':{
+        'constrained':inp['ens_equil_constrained'],
+        'restrained':inp['ens_equil_restrained'], # whether these structures are harmonically restrained
+        'restrained_force':inp['ens_equil_restrained_force'],
+        'colvars':boolean(inp['ens_equil_colvars']), # whether collective variables should be imposed between the ligand and the receptor. if set to true, 'constrained' list above must be empty.
+        'colvar_settings' : {
+          'colvar':inp['ens_equil_colvar_sel'], # list of what parts of the system will have collective variables imposed. options include 'ligand', 'receptor', 'water', 'relative' (for relative colvars between ligand/receptor), or a list of all indeces in pdb to be constrained
+          #'colvar_type':inp['ens_equil_colvar_type'],
+          'colvar_force':inp['ens_equil_colvar_force'], # kcal/mol
+          'colvarstrajfrequency':inp['ens_equil_colvarstrajfrequency'],
+          'colvarsrestartfrequency':inp['ens_equil_colvarsrestartfrequency'],
+          'colvar_ligand_indeces':inp['ens_equil_colvar_ligand_indeces'], #map(int, inp['ens_equil_colvar_ligand_indeces'].split(',')),
+          'colvar_receptor_indeces':inp['ens_equil_colvar_receptor_indeces'], #map(int, inp['ens_equil_colvar_receptor_indeces'].split(',')),
+  
+        },
+        'ensemble':inp['ens_equil_ensemble'],
+        #'num_steps':'10000', # number of steps to calculate for each ensemble
+        'ambersim_settings':{'nstlim':ens_equil_len,'colvars':ens_equil_colvars,'temp0':master_temperature, 'ntwx':dcd_freq, 'RSTconfig':'COM.RST', 'production':'TRUE'},
+      },
+  
+      'prod_settings':{
+        'constrained':inp['fwd_rev_constrained'],
+  
+        #'num_steps':'100000',
+        'ensemble':inp['fwd_rev_ensemble'],
+        'type':inp['fwd_rev_type'], # can be 'protein', 'membrane'
+        'namd_settings':{'numsteps':'','tclforces':'on','tclforcesscript':inp['tclforcesscript']},
+      },
+      'fwd_rev_settings':{
+        'constrained':inp['fwd_rev_constrained'],
+        'ensemble':inp['fwd_rev_ensemble'],
+        'type':inp['fwd_rev_type'], # can be 'protein', 'membrane'
+        'namd_settings':{'tclforces':'on','tclforcesscript':inp['tclforcesscript']},
+        'dcdfreq':inp['fwd_rev_dcdfreq'],
+        'restart_freq':inp['fwd_rev_restart_freq'],
+        'run_freq':inp['fwd_rev_run_freq'],
+        'xstfreq':inp['fwd_rev_dcdfreq'],
+        'extract_xst':inp['extract_xst'],
+        'extract_stride':extract_stride, # the number of trajectories to extract from the ensemble simulations
+        'extract_first':number_of_ens_equil_frames_skipped, # the number of frames to skip from the beginning of the ensemble trajectory
+        'max_num_steps':inp['fwd_rev_max_num_steps'],
+        'launches_per_config':inp['fwd_rev_launches_per_config'],
+        'frame_chunk_size':inp['fwd_rev_frame_chunk_size']
+      },
+      'md_file_paths':md_file_paths, # file paths to the md directories in the anchor file
+      'prods_per_anchor':1, # number of simulations per anchor
+      #'one_equil_per_anchor':true, # true: all prod simulations will be started from portions of one single equilibration. false: all 50 productions will have their own equilibration
+    }
+  
+  
+    md_settings['absolute_mode'] = str(absolute_mode)
+    #md_settings['temp_equil_settings']['temp_range'] = np.concatenate((np.arange(md_settings['temp_equil_settings']['start_temp'],md_settings['temp_equil_settings']['peak_temp'],md_settings['temp_equil_settings']['temp_increment']), \
+     # np.arange(md_settings['temp_equil_settings']['peak_temp'],md_settings['temp_equil_settings']['end_temp'],-md_settings['temp_equil_settings']['temp_increment']), [md_settings['temp_equil_settings']['end_temp']]))
+  
+    md_settings_all = dict(md_settings.items() + sys_params.items() + tcl.items())
+    md.main(md_settings_all)
+  
+ 
 if sys_params['bd']:
   
   bd_receptor_dry_pqr=parser.get_structure('bd_receptor_dry_pqr', sys_params['bd_rec_pqr_filename'], pqr=True)
@@ -750,7 +870,7 @@ other_necessary_files={
 }
 
 
-# write program paths to a pickle
+# write program paths to a pickle-- DEPRICATED
 #print 'namd_special', program_paths['namd_special']
 #program_paths_filename=os.path.join(sys_params['rootdir'], 'program_paths.pkl')
 #program_paths_file= open(program_paths_filename, 'wb')

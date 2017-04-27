@@ -13,6 +13,7 @@ import numpy as np
 import pdb2 as pdb
 from copy import deepcopy # needed to keep track of separate structure objects
 import namd_inputs # contains all the details for the namd input files
+import ambersim_inputs
 import colvars
 import psfmerge
 import  MDAnalysis as mda #import *
@@ -20,6 +21,7 @@ from adv_template import Adv_template, File_template
 import unittest
 import positions_orient
 import cPickle as pickle
+from itertools import groupby
 
 verbose = True
 
@@ -184,6 +186,45 @@ def restraints(occ_pdb, restrained, restrained_force, settings): # harmonic rest
       atom.occupancy = 0
 
   return
+
+def amber_restraints(restrained, settings): # harmonic restrains
+  # Confusingly, constraints in NAMD are different, and should actually be called Restraints...
+  restrained_index_list = []
+  if 'ligand' in restrained: # then restrain the ligand
+    restrained_index_list += parse_selection(settings['ligrange'])
+  if 'receptor' in restrained: # then restrain the receptor
+    restrained_index_list += parse_selection(settings['recrange'])
+  if 'water' in restrained: # restrain waters
+    raise Exception, "restrained waters not yet implemented"
+  # if min_constrained contains a list...
+  for selection in restrained:
+    if type(selection)==type([]): # then it's a list, include all indeces in the list
+      restrained_index_list += selection
+
+
+#convert the string into more compact groupings so amber can read the restraints
+  ranges=[]
+  for k, iterable in groupby(enumerate(sorted(restrained_index_list)), sub):
+       rng = list(iterable)
+       if len(rng) == 1:
+           s = str(rng[0][1])
+       else:
+           s = "%s-%s" % (rng[0][1], rng[-1][1])
+       ranges.append(s)  
+  #print s
+  restraintmask=''.join(ranges)
+  #print 'restraint_mask',restraintmask
+  #for atom in occ_pdb.get_atoms():
+  #  if atom.index in restrained_index_list: # changed restrained residue occupancy
+  #    atom.occupancy = float(restrained_force) # must be converted to a float value
+  #  else:
+  #    atom.occupancy = 0
+
+  return restraintmask
+
+def sub(x):
+    return x[1] - x[0]
+
 
 def make_milestone_list(milestones,hedron):
   '''converts an entire list of milestone dictionaries to TCL-readable array/lists in string form'''
@@ -540,7 +581,8 @@ def prep(settings, holo, stage, inpname, outname='', temperatures=[] ,write_freq
   if len(closest_neighbors) == 0: closest_neighbors = ["None"]
   number_of_neighbors = len(closest_neighbors)
 
-  if stage == 'fwd_rev':
+  if stage == 'fwd_rev' and settings['package']== 'amber':pass
+  else:
     prelim_string_template = '''set TEMP $temperature
 set NUM_REVERSALS $num_reversals
 global REV_FILENAME_BASE; set REV_FILENAME_BASE "REV_COMPLETED.txt"
@@ -618,6 +660,235 @@ set replica_id [myReplica] ;# get the ID of this replica'''
 
   return os.path.join(stage, namd_settings['outfilename'])
 
+
+def amber_prep(settings, holo, stage, inpname, outname='', temperatures=[] ,write_freq='1000',):
+  if verbose: print "creating Amber %s files" % stage
+  
+  i = settings['index']
+  path = settings['md_file_paths'][i][stage]
+  #print path
+  ff = settings['ff'] # forcefield
+  pos_milestone = settings['milestone_pos_rot_list'][i][0]
+  rot_milestone = settings['milestone_pos_rot_list'][i][1]
+  temperature = settings['master_temperature']
+  absolute_mode = settings['absolute_mode']
+
+  if not outname: outname = stage # provide the default outname
+  get_cell = False
+  if len(temperatures) == 0:
+    temperatures = [settings['master_temperature']]
+  if stage == 'min':
+    stage_settings = settings['min_settings']
+
+  if stage == 'temp_equil':
+    stage_settings = settings['temp_equil_settings']
+
+  if stage == 'ens_equil':
+    stage_settings = settings['ensemble_equil_settings']
+
+  if stage == 'prod':
+    stage_settings = settings['prod_settings']
+
+  if stage == 'fwd_rev':
+    stage_settings = settings['fwd_rev_settings']
+
+  ensemble = stage_settings['ensemble']
+  ambersim_settings = stage_settings['ambersim_settings'] # extra settings to send to the NAMD input file
+  
+  if 'constrained' in stage_settings.keys() and stage_settings['constrained']: # if the settings exists and not empty/False
+    fixed = True
+    occ_pdb = deepcopy(holo) # copy the holo structure so we can change the occupancy
+    constrained = stage_settings['constrained']
+    constraints(occ_pdb, constrained, settings) # constrain the selected atoms
+    fxd_name = os.path.join(path,'fxd1.pdb')
+    namd_settings['fixedAtoms'] = 'on'
+    namd_settings['fixedAtomsFile'] = 'fxd1.pdb'
+    namd_settings['fixedAtomsCol'] = 'O'
+    occ_pdb.save(fxd_name, amber=True, standard=False) # save the constraint file
+  else:
+    fixed = False
+
+  if 'restrained' in stage_settings.keys() and stage_settings['restrained']: # if the settings exists and not empty/False
+    const = True
+    #occ_pdb = deepcopy(holo) # copy the holo structure so we can change the occupancy
+    restrained = stage_settings['restrained']
+    ambersim_settings['restraint_wt'] = stage_settings['restrained_force']
+    restraintmask=amber_restraints(restrained,  settings)
+    #restraints(occ_pdb, restrained, restrained_force, settings) # constrain the selected atoms
+    #rest_name = os.path.join(path,'restrained.RST')
+    #occ_pdb.save(rest_name, amber=True, standard=False)
+    #ens_namd_settings['fixedatoms'] = 'off' # we may not necessarily want to turn off fixed atoms
+    ambersim_settings['ntr'] = '1'
+    ambersim_settings['restraint_mask'] = str(restraintmask).strip('[]')
+  else:
+    const = False
+
+
+  settings['whoami'] = str(pos_milestone.index)
+  settings['whoami_rot'] = str(rot_milestone.index)
+  settings['siteid'] = str(pos_milestone.siteid)
+  settings['grid_edge_rad'] = '0.0' # temporary value until this can be more effectively predicted; will speed up TCL script evaluation
+  if ff == 'amber':
+    ambersim_settings['parmfile']=make_relative_path(settings['prmtop'],path) # Find the relative location of the prmtop/inpcrd to be used in the mins
+    ambersim_settings['ambercoor']=make_relative_path(settings['inpcrd'],path)
+  elif ff == 'charmm':
+    ambersim_settings['amber'] = 'no'
+    ambersim_settings['coordinates'] = '../holo_wet.pdb'
+    ambersim_settings['structure'] = '../building/holo_wet.psf'
+    ambersim_settings['paratypecharmm'] = 'on'
+    counter = 1
+    for parameter in settings['charmm_settings']['parameters']:
+      if counter == 1: # we need to make sure the namd input file can get more than one parameter file
+        i = ""
+      else:
+        i = str(counter)
+      ambersim_settings['parameters%s' % i] = parameter
+      counter += 1
+      #namd_settings['parameters2'] = '/extra/moana/rswift1/Permeability/Colvar/A/1F/par_all36_lipid.prm'
+
+  #fhpd_file = 'fhpd.txt'
+  #namd_settings['watermodel'] = settings['watermodel']
+  if stage == 'ens_equil':
+    ambersim_settings['outfilename'] = outname + "_0_1"
+    if settings['lig_rot']:
+      hedron = positions_orient.get_hedron(settings['quat_hedron'])
+      quat_tclforces_settings = {}
+      quat_tclforces_settings['force_constant'] = settings['quat_force_constant']
+      quat_tclforces_settings['recrot'] = settings['recrot']
+      quat_tclforces_settings['rec_indeces'] = settings['quat_rec_indeces']
+      quat_tclforces_settings['lig_indeces'] = settings['quat_lig_indeces']
+      #quat_tclforces_settings['lig_pa1_indeces'] = settings['ligpa1_list'] # MARKED FOR REMOVAL
+      #quat_tclforces_settings['lig_pa3_indeces'] = settings['ligpa3_list'] # MARKED FOR REMOVAL
+      #quat_tclforces_settings['rec_pa1_indeces'] = settings['recpa1_list'] # MARKED FOR REMOVAL
+      #quat_tclforces_settings['rec_pa3_indeces'] = settings['recpa3_list'] # MARKED FOR REMOVAL
+      allquats = make_quat_list_in_tcl(hedron)
+      #for i in range(len(allquats)):
+      quat = rot_milestone.rotation
+      tcl_quat = make_quat_list_in_tcl(quat)
+      quat_tclforces_settings['anchor_quat']=tcl_quat
+      quat_tclforces_settings['neighbor_quats']=allquats
+      closest_neighbors = make_closest_neighbors(ref_quat=quat, hedron=hedron, tcl_output=False)
+      if len(closest_neighbors) == 0: closest_neighbors = ["None"]
+      number_of_neighbors = len(closest_neighbors)
+      #closest_neighbors = make_quat_list_in_tcl(closest_neighbors)
+      for f in range(number_of_neighbors):
+        quat_tclforces_settings['main_neighbor'] = make_quat_list_in_tcl(closest_neighbors[f])
+        ambersim_settings['tclforces'] = 'on'
+        ambersim_settings['tclforcesscript'] = settings['quatforcesscript'] # the script to be evaluated to keep the ligand forced to the rotational milestone
+        ambersim_settings['tclforces_vars'] = quat_tclforces(quat_tclforces_settings).get_output()
+        # write namd file here
+        ambersim_settings['inpfilename'] = inpname
+        ambersim_settings['outfilename'] = outname + "_neighbor_%d_1" % f # 1st number: number of the neighbor, 2nd number: number of ens_equil simulation
+        #inp, namd_params=namd_inputs.make_input(holo, ff, stage, temperature, write_freq, receptor_type=settings['receptor_type'], ensemble=ensemble, fixed=fixed, get_cell=get_cell, constraints=const, settings=namd_settings) #...
+        inp, ambersim_params=ambersim_inputs.make_input(holo, ff, stage, temperature, write_freq, receptor_type=settings['receptor_type'], ensemble=ensemble, fixed=fixed, get_cell=get_cell, constraints=const, settings=ambersim_settings)
+
+        input_name = os.path.join(path, '%s_%d_1.in' % (stage,f))
+        inp.save(input_name)
+        param_filename=(os.path.join(path, 'ambersim_parameters.pkl'))
+        param_file = open(param_filename, 'wb') 
+        pickle.dump(ambersim_params, param_file)
+        param_file.close()
+      return os.path.join(stage, ambersim_settings['outfilename']) # return ens_equil
+    else: # then lig_rot is False
+      ambersim_settings['inpfilename'] = inpname
+      #print inpname
+      ambersim_settings['outfilename'] = outname + "_0_1"
+      inp, ambersim_params=ambersim_inputs.make_input(holo, ff, stage, temperature, write_freq, receptor_type=settings['receptor_type'], ensemble=ensemble, fixed=fixed, get_cell=get_cell, constraints=const, settings=ambersim_settings) #...
+      input_name = os.path.join(path, '%s_%d_1.in' % (stage,0))
+      inp.save(input_name)
+      param_filename=(os.path.join(path, 'ambersim_parameters.pkl'))
+      param_file = open(param_filename, 'wb')
+      pickle.dump(ambersim_params, param_file)
+      param_file.close()
+      return os.path.join(stage, ambersim_settings['outfilename']) # return ens_equil
+
+  hedron = positions_orient.get_hedron(settings['quat_hedron'])
+  allquats = make_quat_list_in_tcl(hedron)
+  quat = rot_milestone.rotation
+  closest_neighbors = make_closest_neighbors(ref_quat=quat, hedron=hedron, tcl_output=False)
+  if len(closest_neighbors) == 0: closest_neighbors = ["None"]
+  number_of_neighbors = len(closest_neighbors)
+
+  if stage == 'fwd_rev':
+    prelim_string_template = '''set TEMP $temperature
+set NUM_REVERSALS $num_reversals
+global REV_FILENAME_BASE; set REV_FILENAME_BASE "REV_COMPLETED.txt"
+global FWD_FILENAME_BASE; set FWD_FILENAME_BASE "FWD_COMPLETED.txt"
+global RESTART_FREQ; set RESTART_FREQ $restart_freq
+global RUN_FREQ; set RUN_FREQ $run_freq
+set ENS_EQUIL_FIRST_FRAME $begin
+set ENS_EQUIL_STRIDE $stride
+set LAUNCHES_PER_CONFIG $launches_per_config
+set FRAME_CHUNK_SIZE $frame_chunk_size
+set UMBRELLA_GLOB_DIR "../ens_equil/" ;# the umbrella sampling directory
+set UMBRELLA_GLOB_NAME "ens_equil_0_?.dcd" ;# the umbrella sampling trajs
+set nr [numReplicas]
+set replica_id [myReplica] ;# get the ID of this replica'''
+    hedron = positions_orient.get_hedron(settings['quat_hedron'])
+    settings['care_about_self'] = 'False'
+    settings['phase'] = 'reverse'
+    settings['abort_on_crossing'] = 'True'
+    #settings['fhpd_file'] = '../reverse/fhpd.txt'
+    settings['max_num_steps'] = stage_settings['max_num_steps']
+    settings['milestone_string'] = make_milestone_list(settings['raw_milestone_list'],hedron)
+    namd_settings['tclforces_vars'] = tclforces(settings).get_output()
+
+    num_frames = settings['ensemble_equil_settings']['namd_settings']['numsteps']
+    dcd_write_freq = int(settings['ensemble_equil_settings']['namd_settings']['dcdfreq'])
+    begin = stage_settings['extract_first'] # new parameter
+    end = int(num_frames)/dcd_write_freq + 1
+    stride = stage_settings['extract_stride'] # new parameter
+    launches_per_config = stage_settings['launches_per_config']
+    frame_chunk_size = stage_settings['frame_chunk_size']
+    restart_freq = stage_settings['restart_freq'] # New parameter
+    run_freq = stage_settings['run_freq'] # new parameter
+    num_reversals = int((end - begin)/stride)
+
+    namd_settings['inpfilename'] = inpname
+    namd_settings['outfilename'] = outname+".$replica_id"
+    namd_settings['coordinates'] = "../holo_wet.pdb" # this gets overwritten...
+    namd_settings['ambercoor'] = '' # this has to be disabled when coordinates are presented
+    namd_settings['velocities'] = ''
+    if bool(stage_settings['extract_xst']):
+      namd_settings['extendedsystem'] = "../ens_equil/ens_equil_0_1.restart.xsc"
+    namd_settings['bincoordinates'] = ""
+    namd_settings['binvelocities'] = ""
+    namd_settings['temperature'] = temperature
+    namd_settings['replicaUniformPatchGrids'] = 'on'
+    namd_settings['numsteps'] = ''
+    namd_settings['restartfreq'] = '$RESTART_FREQ'
+    #namd_settings['id'] = i
+    prelim_settings = {'temperature':temperature, 'num_reversals':num_reversals, 'restart_freq':restart_freq, 'run_freq':run_freq, 'begin':begin, 'stride':stride, 'launches_per_config':launches_per_config, 'frame_chunk_size':frame_chunk_size}
+    prelim_string = Adv_template(prelim_string_template,prelim_settings).get_output() # fill in the missing values
+    namd_settings['prelim_string'] = prelim_string
+    post_string_settings = {}
+    namd_settings['post_string'] = File_template(fwd_rev_template_location, post_string_settings).get_output()
+
+    inp, namd_params=namd_inputs.make_input(holo, ff, stage, temperature, write_freq, fixed=fixed, ensemble=ensemble, get_cell=get_cell, constraints=const, settings=namd_settings) #...
+    input_name = os.path.join(path, 'fwd_rev1.namd')
+    inp.save(input_name) 
+    param_filename=(os.path.join(path, 'namd_parameters.pkl'))   
+    param_file = open(param_filename, 'wb')
+    pickle.dump(namd_params, param_file)
+    param_file.close()
+    #make_fhpd_script(path, 'forward_template.namd', settings['fhpd_file'], number_of_neighbors=number_of_neighbors)
+    return os.path.join(stage, namd_settings['outfilename'])
+
+
+  counter = 1
+  for temperature in temperatures:
+    ambersim_settings['inpfilename'] = inpname
+    ambersim_settings['outfilename'] = outname + str(counter)
+    inp, namd_params=ambersim_inputs.make_input(holo, ff, stage, temperature, write_freq, receptor_type=settings['receptor_type'], ensemble=ensemble, fixed=fixed, get_cell=get_cell, constraints=const, settings=ambersim_settings) #...
+    input_name = os.path.join(path, '%s%d.in' % (stage,counter))
+    inp.save(input_name)
+    counter += 1
+    inpname = ambersim_settings['outfilename']
+
+  return os.path.join(stage, ambersim_settings['outfilename'])
+
+
+
 def main(settings):
   '''called by seekr, executes other necessary commands'''
   #milestone_list = settings['milestone_list']
@@ -634,16 +905,29 @@ def main(settings):
       if verbose: print "Using forcefield CHARMM"
       charmm_building(settings)
     last_out=""
-    if settings['min']: last_out=prep(settings, holo, stage='min',  inpname='') # if we are supposed to do minimizations
-    if settings['temp_equil']: last_out=prep(settings, holo, stage='temp_equil', inpname=os.path.join('..',last_out), temperatures=settings['temp_equil_settings']['temp_range']) # if we are supposed to do temperature equilibrations
-    if settings['ens_equil']: last_out=prep(settings, holo, stage='ens_equil', inpname=os.path.join('..',last_out)) # if we are supposed to do temperature equilibrations
-    if settings['ensemble_equil_settings']['colvars']: # if running colvars
-      colvars.main(settings)
+    if settings['package']=="amber": 
+      if verbose: print "Using Amber simulation package"
+      if settings['min']: last_out=amber_prep(settings, holo, stage='min',  inpname='') # if we are supposed to do minimizations
+      if settings['temp_equil']: last_out=amber_prep(settings, holo, stage='temp_equil', inpname=os.path.join('..',last_out), temperatures=settings['temp_equil_settings']) # if we are supposed to do temperature equilibrations
+      if settings['ens_equil']: last_out=amber_prep(settings, holo, stage='ens_equil', inpname=os.path.join('..',last_out)) # if we are supposed to do temperature equilibrations
+      if settings['ensemble_equil_settings']['colvars']: # if running colvars
+        colvars.main(settings)
 
-    print "last_out before reverse:", last_out
+      print "last_out before reverse:", last_out
+      prep(settings, holo, stage='fwd_rev', inpname=os.path.join('..',last_out)) # we can put the two stages together
+
+    if settings['package']=="namd":
+      if verbose: print "Using NAMD simulation package"
+      if settings['min']: last_out=prep(settings, holo, stage='min',  inpname='') # if we are supposed to do minimizations
+      if settings['temp_equil']: last_out=prep(settings, holo, stage='temp_equil', inpname=os.path.join('..',last_out), temperatures=settings['temp_equil_settings']['temp_range']) # if we are supposed to do temperature equilibrations
+      if settings['ens_equil']: last_out=prep(settings, holo, stage='ens_equil', inpname=os.path.join('..',last_out)) # if we are supposed to do temperature equilibrations
+      if settings['ensemble_equil_settings']['colvars']: # if running colvars
+        colvars.main(settings)
+
+      print "last_out before reverse:", last_out
     #prep(settings,holo, stage='reverse', inpname=os.path.join('..',last_out)) # this can't be run until the ensemble is complete
     #prep(settings,holo, stage='forward', inpname=os.path.join('..',last_out)) # this can't be run until the reverse stage is complete
-    prep(settings, holo, stage='fwd_rev', inpname=os.path.join('..',last_out)) # we can put the two stages together
+      prep(settings, holo, stage='fwd_rev', inpname=os.path.join('..',last_out)) # we can put the two stages together
 
 
 
