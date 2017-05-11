@@ -23,7 +23,7 @@ class Ambersim_template(Adv_template):
     self.template_string = ''.join(open(template_filename, 'r').readlines()) # first load the template file and make it a string separated by newlines
     self.params = params
     print 'template name', template_filename 
-    #pprint(self.params)
+    pprint(self.params)
     self.template_string = self.fix_vars()
     rawoutput = self.parse_commands()
     template_string = string.Template(rawoutput) # create the template
@@ -48,7 +48,7 @@ default_ambersim_input_params = {
 #'outdir':'',
 #'outputname':'dummy',
 #'firsttimestep':'0',
-'dt':'2.0',
+'dt':'0.002',
 'nstlim':'1',
 'irest':'0',
 
@@ -75,8 +75,8 @@ default_ambersim_input_params = {
 #'binvelocities':'$inpname.restart.vel',
 #'bincoordinates':'$inpname.restart.coor',
 #'cwd':'',
-'tempi':'300',
-'temp0':'300',
+'tempi':'298.0',
+'temp0':'298.0',
 #'watermodel':'',
 
 #'outfilename':'$outname',
@@ -231,7 +231,7 @@ membrane_params = {
 min_params = {
   'caption':'SEEKR minimization', # the string at the top of the file
   'imin':'1',
-  'maxcyc':'5000',
+  #'maxcyc':'5000',
   #'pme':'no',
   #'binvelocities':'',
   #'extendedsystem':'',
@@ -246,6 +246,10 @@ min_params = {
 
 temperature_equil_params = {
   'caption':'SEEKR temperature equilibration', # the string at the top of the file
+  'temp_equil':'True',
+  'ntt':3,
+  #'tempi':0,
+  
   #'pme':'yes',
   #'fullelectfrequency':'1', # frequency (in timesteps) that electrostatics are evaluated
   #'veldcdfile':'$outname.veldcd',
@@ -254,6 +258,12 @@ temperature_equil_params = {
 
 ens_equil_params = {
   'caption':'SEEKR ensemble equilibration', # the string at the top of the file
+  'irest':'1',
+  #'ntp':'0',
+  #'barostat':'1',
+  #'ntt':'1',
+  #'taup':'10.0',
+  'ntx':'5',
   #'pme':'yes',
   #'fullelectfrequency':'1', # frequency (in timesteps) that electrostatics are evaluated
   #'veldcdfile':'${outname}vel.dcd',
@@ -284,22 +294,31 @@ constraint_params = {
 def ensemble_params(ensemble, temp):
   '''populates the ensemble-relevant variables with ensemble information'''
   params = {}
-  if ensemble == 'npt' or ensemble == 'nvt':
-    params['langevin'] = 'on'
-    params['langevintemp'] = temp
-    params['langevindamping'] = '5'
-    params['langevinhydrogen'] = 'no'
+ #if ensemble == 'npt' or ensemble == 'nvt':
+  #  params['ntt'] = '1'
+    #params['langevintemp'] = temp
+    #params['langevindamping'] = '5'
+    #params['langevinhydrogen'] = 'no'
 
   if ensemble == 'npt':
-    params['usegrouppressure'] = 'no'
-    params['langevinpiston'] = 'on'
-    params['langevinpistontarget'] = '1.01325'
-    params['langevinpistonperiod'] = '100'
-    params['langevinpistondecay'] = '50'
-    params['langevinpistontemp'] = temp
+    #params['usegrouppressure'] = 'no'
+    params['ntt'] = '3'
+    params['ntb']= '2'
+    params['ntp']= '1'
+    params['gamma_ln']= '1.0'
+    params['barostat'] = '1'
+    params['pres0'] = '1.01325'
+    params['taup'] = '10.0'
+    #params['langevinpistonperiod'] = '100'
+    #params['langevinpistondecay'] = '50'
+    #params['langevinpistontemp'] = temp
   elif ensemble == 'nvt':
-    params['langevinpiston'] = 'no'
-    params['usegrouppressure'] = 'no'
+    params['ntt'] = '1'
+    params['ntb']= '1'
+    params['ntp']= '0'
+    params['taup']= 10.0
+    #params['langevinpiston'] = 'no'
+    #params['usegrouppressure'] = 'no'
 
   elif ensemble == 'nve':
     params['langevin'] = 'off'

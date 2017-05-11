@@ -42,7 +42,6 @@ md_time_factor = 2.0 # 2 fs per timestep
 bd_time_factor = 1000.0 # 1000 fs per ps
 
 inp = { # contains default parameters in case they aren't included in the input file
-  'package':'namd',
   'test_mode':False, # reduces the calculation time by restricting input size. Use only for debugging SEEKR
   'LA_src':"../../la.tcl",
   'tcl_script_control':True, # whether the milestoning is controlled by the TCL script versus something else
@@ -125,6 +124,7 @@ inp = { # contains default parameters in case they aren't included in the input 
   'inputgen_cfac':'4.0',
 
 }
+
 
 def pickle_or_load(filename, picklename, struc_name="pickle",pqr=False):
   'for large files, instead of parsing, they can be saved and loaded much more quickly as a pickle. '
@@ -551,13 +551,13 @@ config_dirlist, md_file_paths, bd_file_paths, raw_milestone_list=filetree.main(f
 site_list = milestones.split_milestones_by_site(raw_milestone_list)
 milestones.write_milestone_file(site_list, milestone_settings['milestone_filename'], master_temperature, md_time_factor, bd_time_factor)
 
-if inp['package'] == 'namd':
-  if boolean(inp['ens_equil_colvars']):
-    ens_equil_colvars = 'on'
-  else:
-    ens_equil_colvars = 'off'
+if boolean(inp['ens_equil_colvars']):
+  ens_equil_colvars = 'on'
+else:
+  ens_equil_colvars = 'off'
   
-  if sys_params['md']:
+if sys_params['md']:
+  if inp['package'] == 'namd':
     md_settings={ # settings for the md module
       #'milestone_list':milestone_list,
       'milestone_pos_rot_list':milestone_pos_rot_list,
@@ -659,22 +659,16 @@ if inp['package'] == 'namd':
     }
   
   
-    md_settings['absolute_mode'] = str(absolute_mode)
-    md_settings['temp_equil_settings']['temp_range'] = np.concatenate((np.arange(md_settings['temp_equil_settings']['start_temp'],md_settings['temp_equil_settings']['peak_temp'],md_settings['temp_equil_settings']['temp_increment']), \
-      np.arange(md_settings['temp_equil_settings']['peak_temp'],md_settings['temp_equil_settings']['end_temp'],-md_settings['temp_equil_settings']['temp_increment']), [md_settings['temp_equil_settings']['end_temp']]))
+  #  md_settings['absolute_mode'] = str(absolute_mode)
+  #  md_settings['temp_equil_settings']['temp_range'] = np.concatenate((np.arange(md_settings['temp_equil_settings']['start_temp'],md_settings['temp_equil_settings']['peak_temp'],md_settings['temp_equil_settings']['temp_increment']), \
+   #   np.arange(md_settings['temp_equil_settings']['peak_temp'],md_settings['temp_equil_settings']['end_temp'],-md_settings['temp_equil_settings']['temp_increment']), [md_settings['temp_equil_settings']['end_temp']]))
   
-    md_settings_all = dict(md_settings.items() + sys_params.items() + tcl.items())
-    md.main(md_settings_all)
+    #md_settings_all = dict(md_settings.items() + sys_params.items() + tcl.items())
+    #md.main(md_settings_all)
   
   #print "md_settings:", md_settings
 
-if inp['package'] == 'amber':
-  if boolean(inp['ens_equil_colvars']):
-    ens_equil_colvars = 'on'
-  else:
-    ens_equil_colvars = 'off'
-  
-  if sys_params['md']:
+  if inp['package'] == 'amber':
     md_settings={ # settings for the md module
       #'milestone_list':milestone_list,
       'milestone_pos_rot_list':milestone_pos_rot_list,
@@ -694,7 +688,7 @@ if inp['package'] == 'amber':
       'charmm_settings': {
         'parameters':inp['charmm_parameters'].split(','),
         'insert_index':insert_index,
-        'recpsf':inp['rec_psf_filename'],
+        #'recpsf':inp['rec_psf_filename'],
         'ligpsf':inp['lig_psf_filename'],
         'ignore_psf':boolean(inp['ignore_psf'])
       },
@@ -706,25 +700,23 @@ if inp['package'] == 'amber':
         'constrained':inp['min_constrained'], # list what parts of the structure will be constrained during minimizations, including "ligand" (values taken from tcl['lig_indeces'], above), "receptor" (values taken from tcl['rec_indeces']), or a list of all indeces in the pdb file you want constrained
         'restrained':inp['min_restrained'],
         'restrained_force':inp['min_restrained_force'],
-        'maxcyc':inp['min_num_steps'], # number of minimization steps
+        'maxycy':inp['min_num_steps'], # number of minimization steps
         #'out_freq':inp['min_out_freq'],
         'ensemble':inp['min_ensemble'], # irrelevant for minimizations, but necessary for the program
-        'ambersim_settings':{'numsteps':inp['min_num_steps'],'temp0':master_temperature},
-  
+        'ambersim_settings':{'maxcyc':inp['min_num_steps'],'temperature':master_temperature}
+
       },
       'temp_equil':boolean(inp['temp_equil']), # whether we actually run equilibration
       'temp_equil_settings':{
         'constrained':inp['temp_equil_constrained'], # same as above
         'restrained':inp['temp_equil_restrained'],
         'restrained_force':inp['temp_equil_restrained_force'],
-        'temp0':master_temperature,
-        'tempi':'0',
-        'peak_temp':float(inp['temp_equil_peak_temp']),	# these define how the temperature will be adjusted up and then back
-        'end_temp':master_temperature,
-        'temp_increment':float(inp['temp_equil_temp_increment']),
-        'temp_step_time':float(inp['temp_equil_num_steps']), # number of steps per temperature increment
+        #'tempi':0.0, #start heating from 0K
+        'temp0':master_temperature, #final temperature for simulating
+        #'temp_increment':float(inp['temp_equil_temp_increment']), #for amber simulations this is not used
+        #'IINC':float(inp['temp_equil_num_steps']), # number of steps per temperature increment
         'ensemble':inp['temp_equil_ensemble'],
-        'ambersim_settings':{'nstlim':inp['temp_equil_num_steps'], 'production':'TRUE'},
+        'ambersim_settings':{'nstlim':inp['temp_equil_num_steps'], 'ntt':'3','tempi':'0.0','temp0':master_temperature, 'nmropt': '1', 'istep2':str(int(inp['temp_equil_num_steps'])-5000),'value1':'0.0', 'value2':master_temperature}
       },
       'ens_equil':boolean(inp['ens_equil']), # whether we will run constrained runs for ensemble equilibrations
       'ensemble_equil_settings':{
@@ -740,16 +732,16 @@ if inp['package'] == 'amber':
           'colvarsrestartfrequency':inp['ens_equil_colvarsrestartfrequency'],
           'colvar_ligand_indeces':inp['ens_equil_colvar_ligand_indeces'], #map(int, inp['ens_equil_colvar_ligand_indeces'].split(',')),
           'colvar_receptor_indeces':inp['ens_equil_colvar_receptor_indeces'], #map(int, inp['ens_equil_colvar_receptor_indeces'].split(',')),
-  
+
         },
         'ensemble':inp['ens_equil_ensemble'],
         #'num_steps':'10000', # number of steps to calculate for each ensemble
-        'ambersim_settings':{'nstlim':ens_equil_len,'colvars':ens_equil_colvars,'temp0':master_temperature, 'ntwx':dcd_freq, 'RSTconfig':'COM.RST', 'production':'TRUE'},
+        'ambersim_settings':{'nstlim':ens_equil_len,'colvars':ens_equil_colvars,'tempi':master_temperature, 'temp0':master_temperature, 'ntwx':dcd_freq,'ntwr':dcd_freq,'ntpr':dcd_freq,'nmropt':'1', 'DISANG':'COM.RST', 'DUMPAVE':dcd_freq, },
       },
-  
+
       'prod_settings':{
         'constrained':inp['fwd_rev_constrained'],
-  
+
         #'num_steps':'100000',
         'ensemble':inp['fwd_rev_ensemble'],
         'type':inp['fwd_rev_type'], # can be 'protein', 'membrane'
@@ -775,16 +767,15 @@ if inp['package'] == 'amber':
       'prods_per_anchor':1, # number of simulations per anchor
       #'one_equil_per_anchor':true, # true: all prod simulations will be started from portions of one single equilibration. false: all 50 productions will have their own equilibration
     }
-  
-  
-    md_settings['absolute_mode'] = str(absolute_mode)
-    #md_settings['temp_equil_settings']['temp_range'] = np.concatenate((np.arange(md_settings['temp_equil_settings']['start_temp'],md_settings['temp_equil_settings']['peak_temp'],md_settings['temp_equil_settings']['temp_increment']), \
-     # np.arange(md_settings['temp_equil_settings']['peak_temp'],md_settings['temp_equil_settings']['end_temp'],-md_settings['temp_equil_settings']['temp_increment']), [md_settings['temp_equil_settings']['end_temp']]))
-  
-    md_settings_all = dict(md_settings.items() + sys_params.items() + tcl.items())
-    md.main(md_settings_all)
-  
- 
+
+
+  md_settings['absolute_mode'] = str(absolute_mode)
+  #md_settings['temp_equil_settings']['temp_range'] = np.concatenate((np.arange(md_settings['temp_equil_settings']['start_temp'],md_settings['temp_equil_settings']['peak_temp'],md_settings['temp_equil_settings']['temp_increment']), \
+   # np.arange(md_settings['temp_equil_settings']['peak_temp'],md_settings['temp_equil_settings']['end_temp'],-md_settings['temp_equil_settings']['temp_increment']), [md_settings['temp_equil_settings']['end_temp']]))
+
+  md_settings_all = dict(md_settings.items() + sys_params.items() + tcl.items())
+  md.main(md_settings_all)
+
 if sys_params['bd']:
   
   bd_receptor_dry_pqr=parser.get_structure('bd_receptor_dry_pqr', sys_params['bd_rec_pqr_filename'], pqr=True)
@@ -826,6 +817,7 @@ if sys_params['bd']:
     },
     
   }
+
   for key in sorted(inp.keys()):
     if re.match("ion[0-9]+$", key): # then this is an ion
       ion_dict = {'key':key}
@@ -870,7 +862,7 @@ other_necessary_files={
 }
 
 
-# write program paths to a pickle-- DEPRICATED
+# write program paths to a pickle
 #print 'namd_special', program_paths['namd_special']
 #program_paths_filename=os.path.join(sys_params['rootdir'], 'program_paths.pkl')
 #program_paths_file= open(program_paths_filename, 'wb')

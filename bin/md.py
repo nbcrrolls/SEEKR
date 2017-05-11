@@ -15,6 +15,7 @@ from copy import deepcopy # needed to keep track of separate structure objects
 import namd_inputs # contains all the details for the namd input files
 import ambersim_inputs
 import colvars
+import amber_colvars
 import psfmerge
 import  MDAnalysis as mda #import *
 from adv_template import Adv_template, File_template
@@ -22,6 +23,7 @@ import unittest
 import positions_orient
 import cPickle as pickle
 from itertools import groupby
+import pprint
 
 verbose = True
 
@@ -682,7 +684,7 @@ def amber_prep(settings, holo, stage, inpname, outname='', temperatures=[] ,writ
 
   if stage == 'temp_equil':
     stage_settings = settings['temp_equil_settings']
-
+  
   if stage == 'ens_equil':
     stage_settings = settings['ensemble_equil_settings']
 
@@ -875,17 +877,29 @@ set replica_id [myReplica] ;# get the ID of this replica'''
     return os.path.join(stage, namd_settings['outfilename'])
 
 
-  counter = 1
-  for temperature in temperatures:
+  if settings['package']== 'amber':
     ambersim_settings['inpfilename'] = inpname
-    ambersim_settings['outfilename'] = outname + str(counter)
+    ambersim_settings['outfilename'] = outname  
     inp, namd_params=ambersim_inputs.make_input(holo, ff, stage, temperature, write_freq, receptor_type=settings['receptor_type'], ensemble=ensemble, fixed=fixed, get_cell=get_cell, constraints=const, settings=ambersim_settings) #...
-    input_name = os.path.join(path, '%s%d.in' % (stage,counter))
+    input_name = os.path.join(path, '%s.in' % (stage,))
     inp.save(input_name)
-    counter += 1
     inpname = ambersim_settings['outfilename']
 
-  return os.path.join(stage, ambersim_settings['outfilename'])
+    return os.path.join(stage, ambersim_settings['outfilename'])
+
+##temporary while still using namd for forward_reverse phase
+  if settings['package']== 'namd':
+    counter = 1
+    for temperature in temperatures:
+      ambersim_settings['inpfilename'] = inpname
+      ambersim_settings['outfilename'] = outname + str(counter)
+      inp, namd_params=ambersim_inputs.make_input(holo, ff, stage, temperature, write_freq, receptor_type=settings['receptor_type'], ensemble=ensemble, fixed=fixed, get_cell=get_cell, constraints=const, settings=ambersim_settings) #...
+      input_name = os.path.join(path, '%s%d.in' % (stage,counter))
+      inp.save(input_name)
+      counter += 1
+      inpname = ambersim_settings['outfilename']
+
+      return os.path.join(stage, ambersim_settings['outfilename'])
 
 
 
@@ -911,8 +925,8 @@ def main(settings):
       if settings['temp_equil']: last_out=amber_prep(settings, holo, stage='temp_equil', inpname=os.path.join('..',last_out), temperatures=settings['temp_equil_settings']) # if we are supposed to do temperature equilibrations
       if settings['ens_equil']: last_out=amber_prep(settings, holo, stage='ens_equil', inpname=os.path.join('..',last_out)) # if we are supposed to do temperature equilibrations
       if settings['ensemble_equil_settings']['colvars']: # if running colvars
-        colvars.main(settings)
-
+        amber_colvars.main(settings)      
+ 
       print "last_out before reverse:", last_out
       prep(settings, holo, stage='fwd_rev', inpname=os.path.join('..',last_out)) # we can put the two stages together
 
