@@ -22,7 +22,7 @@ set 'extract_stride' to '1'. This gives the stride between frames of the umbrell
 Set Program path information:
 If these paths are already specified in something like a bashrc, you can skip this step...
 
-inputgen_location /(your path)/src   #for Amarolab users: /soft/pdb2pqr/latest/src
+inputgen_location /(your path)/src   #for Amarolab users: /soft/pdb2pqr/latest/src -- this should already be defined as an environment variable!
 
 These two are likely already aliased for Amarolab users:
 apbs_executable SOMETHING
@@ -361,6 +361,7 @@ add the following lines, changing the path to reflect where the special build is
 export NAMD_SEEKR="/path/to/new/compile/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/namd2"
 export CHARM_SEEKR="/path/to/new/compile/NAMD_CVS-2015-11-02_Source/Linux-x86_64-g++/charmrun"
 export MPIEXEC="/path/to/mpiexec"
+export INPUTGEN="/path/to/inputgen.py"
 
 
 Running Ensemble Equilibrations:

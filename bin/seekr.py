@@ -117,7 +117,7 @@ inp = { # contains default parameters in case they aren't included in the input 
   'lpbe_npbe':'lpbe',
   'bd_rec_pqr_filename':'',
   'apbs_executable':'apbs',
-  'inputgen_executable':'inputgen.py',
+  'inputgen_executable':os.environ['INPUTGEN'],
   'inputgen_fadd':'100',
   'inputgen_gmemceil':'64000',
   'inputgen_resolution':'0.5',
