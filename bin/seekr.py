@@ -626,7 +626,7 @@ if sys_params['md']:
         },
         'ensemble':inp['ens_equil_ensemble'],
         #'num_steps':'10000', # number of steps to calculate for each ensemble
-        'namd_settings':{'numsteps':ens_equil_len,'colvars':ens_equil_colvars,'temperature':master_temperature, 'dcdfreq':dcd_freq,'xstfreq':dcd_freq,'restartfreq':dcd_freq,'outputenergies':dcd_freq, 'outputtiming':dcd_freq, 'veldcdfreq':dcd_freq, 'colvarsconfig':colvars.colvar_script_name},
+        'namd_settings':{'numsteps':ens_equil_len,'colvars':ens_equil_colvars,'temperature':master_temperature, 'dcdfreq':dcd_freq,'xstfreq':dcd_freq,'restartfreq':dcd_freq,'outputenergies':dcd_freq, 'outputtiming':dcd_freq, 'veldcdfreq':dcd_freq, 'colvarsconfig':colvars.COLVAR_SCRIPT_NAME},
       },
   
       'prod_settings':{
@@ -659,9 +659,9 @@ if sys_params['md']:
     }
   
   
-  #  md_settings['absolute_mode'] = str(absolute_mode)
-  #  md_settings['temp_equil_settings']['temp_range'] = np.concatenate((np.arange(md_settings['temp_equil_settings']['start_temp'],md_settings['temp_equil_settings']['peak_temp'],md_settings['temp_equil_settings']['temp_increment']), \
-   #   np.arange(md_settings['temp_equil_settings']['peak_temp'],md_settings['temp_equil_settings']['end_temp'],-md_settings['temp_equil_settings']['temp_increment']), [md_settings['temp_equil_settings']['end_temp']]))
+     #md_settings['absolute_mode'] = str(absolute_mode)
+    md_settings['temp_equil_settings']['temp_range'] = np.concatenate((np.arange(md_settings['temp_equil_settings']['start_temp'],md_settings['temp_equil_settings']['peak_temp'],md_settings['temp_equil_settings']['temp_increment']), \
+    np.arange(md_settings['temp_equil_settings']['peak_temp'],md_settings['temp_equil_settings']['end_temp'],-md_settings['temp_equil_settings']['temp_increment']), [md_settings['temp_equil_settings']['end_temp']]))
   
     #md_settings_all = dict(md_settings.items() + sys_params.items() + tcl.items())
     #md.main(md_settings_all)

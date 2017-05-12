@@ -583,8 +583,7 @@ def prep(settings, holo, stage, inpname, outname='', temperatures=[] ,write_freq
   if len(closest_neighbors) == 0: closest_neighbors = ["None"]
   number_of_neighbors = len(closest_neighbors)
 
-  if stage == 'fwd_rev' and settings['package']== 'amber':pass
-  else:
+  if stage == 'fwd_rev' and settings['package'] != 'amber': 
     prelim_string_template = '''set TEMP $temperature
 set NUM_REVERSALS $num_reversals
 global REV_FILENAME_BASE; set REV_FILENAME_BASE "REV_COMPLETED.txt"
