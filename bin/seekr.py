@@ -494,9 +494,6 @@ if test_mode:
 
 
 site_list = milestones.split_milestones_by_site(raw_milestone_list)
-for site in site_list:
-  for milestone in site:
-    print "sitelist milestone", milestone.fullname, milestone.siteid
 pos_settings_all = dict(pos_settings.items() + struct.items() + [('milestone_list',raw_milestone_list)])
 wet_configs, lig_configs, pos_rot_combo, insert_index, last_ligand_index = positions_orient.main(pos_settings_all) # wet_configs: ligand+receptor structures, lig_configs: ligand configs only
 
@@ -531,12 +528,10 @@ if tcl['rec_com_indeces'].lower() == 'auto_ca':
   #print "REPLACING rec_com_indeces with:", tcl['rec_com_indeces']
 
 # need to filter out the members of milestone_list so we are only including the members that have been included in the configs
-#site_list = milestones.split_milestones_by_site(raw_milestone_list)
 print "position/rotation/site index combinations:", pos_rot_combo
 milestone_pos_rot_list = [] # contains pairs of milestone objects for position and rotation
 #milestone_pos_rot_site_list = []
 #milestone_pos_rot_list_indeces = [] # same as above, except contains the milestone indeces
-print len(pos_rot_combo)
 for index_pair in pos_rot_combo:
   pos_index = index_pair[0]; rot_index = index_pair[1]; site_index = index_pair[2]-1
   #milestone_list.append(raw_milestone_list[index])

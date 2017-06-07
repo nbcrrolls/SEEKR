@@ -68,7 +68,6 @@ class Milestone():
     self.index = index
     self.siteid = siteid
     self.sitenum= int(re.split('(\d+)',siteid)[1])
-    #print "self.siteindex", self.siteindex
     self.center_type = center_type
     self.dimensions = dimensions
     self.absolute = absolute
@@ -526,17 +525,13 @@ def split_milestones_by_site(milestone_list): # splits the given list into a lis
   site_list = []
   cur_site = []
   cur_siteid = milestone_list[0].siteid
-  #print "cur_siteid" , cur_siteid
   for milestone in milestone_list: # for every milestone
-    print "cur_siteid", cur_siteid
-    print "siteid", milestone.siteid, milestone.fullname, milestone.directory
     if milestone.siteid != cur_siteid: # if we have a new siteid
       site_list.append(cur_site) # then append off this siteid list and begin anew
       cur_site = []
       cur_siteid = milestone.siteid
     cur_site.append(milestone) # at any rate, add this milestone to the current list of site id's
   site_list.append(cur_site)
-  print "site_list", len(site_list)
   return site_list
 
 def main(settings):
@@ -575,8 +570,6 @@ def main(settings):
     milestone_list += milestones
     site_list.append(milestones)
     site_index += 1
-  for milestone in milestone_list:
-    print "milestone", milestone.fullname, milestone.siteid
   #write_milestone_file(site_list, milestone_filename, master_temperature) # commented out because this will be written later when the filetree is created and we know the names of the directories
 
   return milestone_list

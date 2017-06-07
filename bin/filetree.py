@@ -62,8 +62,6 @@ def main(settings):
     anchor_filetree.make_tree(rootdir) # create this anchor's directory
     milestone_pos_rot_list[i][0].directory = anchor_name # update this milestones directory information
     anchor_dir = os.path.join(rootdir, anchor_name)
-    for milestone in raw_milestone_list:
-      print "raw_list end filetree", milestone.siteid, milestone.fullname, milestone.directory
     # MD filetree
     md_file_path={}
     if settings['md'] == True and milestone_pos_rot_list[i][0].md == True: # then prep this anchor for an MD simulation

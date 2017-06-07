@@ -432,7 +432,7 @@ def decompose_milestones(milestones):
   positional_milestones = []
   rotational_milestones = []
   site_counter = 0
-  for milestone in milestones:
+  for milestone in site:
     if milestone.shape in ["sphere","plane"]:
       positional_milestones.append(milestone)
     elif milestone.shape in ["rotational"]:
@@ -465,7 +465,7 @@ def main(settings): # NOTE: will need to include other arguments: traj, etc...
   receptor_dry = settings['receptor_dry_pqr']
   milestones = settings['milestone_list']
   '''locations = []
-  quaternions = [
+  quaternions = []
   fullnames = []
   sites = []
   for m in milestones:
@@ -508,11 +508,9 @@ def main(settings): # NOTE: will need to include other arguments: traj, etc...
       if structures_clash(lig_config, receptor_dry, tolerance=0.2): continue # if there's a clash
     holo_config_wet, insert_index, last_ligand_index = pdb.ligmerge(lig_config, receptor_wet, verbose=False)
     holo_config_wet.struct_id = lig_config.struct_id # set the structure description to the same as the ligand
-    print "holo_wet_structid", holo_config_wet.struct_id
     holo_config_wet.renumber_indeces() # to number the indeces consecutively
     wet_configs.append(holo_config_wet)
     pos_rot_combo.append(index_list[i])
-    #print "holo_wet_structid", holo_config_wet.struct_id
 
   print "len(wet_configs):", len(wet_configs)
   print "len(raw_configs):", len(raw_configs)
