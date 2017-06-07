@@ -432,7 +432,7 @@ def decompose_milestones(milestones):
   positional_milestones = []
   rotational_milestones = []
   site_counter = 0
-  for milestone in site:
+  for milestone in milestones:
     if milestone.shape in ["sphere","plane"]:
       positional_milestones.append(milestone)
     elif milestone.shape in ["rotational"]:
