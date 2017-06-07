@@ -49,11 +49,11 @@ def main(settings):
   milestone_pos_rot_list = settings['milestone_pos_rot_list']
   #dry_configs=settings['dry_configs']
 
-
   config_dirlist = []
   md_file_paths = []
   bd_file_paths = []
   config_counter = 0
+  
   for i in range(len(wet_configs)): # for each configuration, it gets its own directory
     wet_config = wet_configs[i]
     anchor_name = "anchor_%s" % (wet_config.struct_id,)
@@ -62,6 +62,8 @@ def main(settings):
     anchor_filetree.make_tree(rootdir) # create this anchor's directory
     milestone_pos_rot_list[i][0].directory = anchor_name # update this milestones directory information
     anchor_dir = os.path.join(rootdir, anchor_name)
+    for milestone in raw_milestone_list:
+      print "raw_list end filetree", milestone.siteid, milestone.fullname, milestone.directory
     # MD filetree
     md_file_path={}
     if settings['md'] == True and milestone_pos_rot_list[i][0].md == True: # then prep this anchor for an MD simulation
@@ -88,11 +90,11 @@ def main(settings):
       md_file_path['dry_holo'] = dry_holo_filename
 
 
-
     config_dirlist.append(anchor_name)
     if md_file_path: md_file_paths.append(md_file_path)
     if bd_dir: bd_file_paths.append(bd_dir) # bd_file_path
     config_counter+=1 # increment the loop counter
+
 
   return config_dirlist, md_file_paths, bd_file_paths, raw_milestone_list
 
