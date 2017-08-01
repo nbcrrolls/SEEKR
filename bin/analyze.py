@@ -706,7 +706,8 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
     trans['inf'] = {'inf':0.0}
     counts['inf'] = {'inf':0}
     avg_times['inf'] = 0.0
-    
+        
+
   elif calc_type == "free_energy": # then the user wants a free energy profile
     trans['inf'] = {'inf':0.0}
     counts['inf'] = {'inf':0}
@@ -970,7 +971,7 @@ def main():
   if args['off']:
     print "Running k-off calculations."
     calc_type = "off"
-    
+
   elif args['free_energy']:
     print "Running free energy profile calculations."
     calc_type = "free_energy"
