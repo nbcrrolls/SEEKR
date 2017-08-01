@@ -15,7 +15,7 @@ trajin ens_equil_0_?.dcd
 #trajin ens_equil_0_5.dcd
 #trajin ens_equil_0_6.dcd
 #trajin ens_equil_0_7.dcd
-parm ../../../anchor_4_4_site1_32.6_19.0_21.9_0/bd/bd_receptor_dry_pqr.pqr #using the BD structure as a reference for alignment
-reference ../../../anchor_4_4_site1_32.6_19.0_21.9_0/bd/bd_receptor_dry_pqr.pqr parm ../../../anchor_4_4_site1_32.6_19.0_21.9_0/bd/bd_receptor_dry_pqr.pqr
-rms @1-184  mass reference #aligning based on all atoms of the receptor
+parm ../../../anchor_8_8_site1_-3.3_0.4_13.5_0/bd/bd_receptor_dry_pqr.pqr #using the BD structure as a reference for alignment
+reference ../../../anchor_8_8_site1_-3.3_0.4_13.5_0/bd/bd_receptor_dry_pqr.pqr parm ../../../anchor_8_8_site1_-3.3_0.4_13.5_0/bd/bd_receptor_dry_pqr.pqr
+rms @1-147  mass reference #aligning based on all atoms of the receptor
 trajout ens_equil_center.dcd start 3000 stop last

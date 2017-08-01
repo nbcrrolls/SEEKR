@@ -363,9 +363,11 @@ def trans_dict_to_matrix(trans_dict):
   trans_dict_keys = trans_dict.keys()
   trans_dict_keys = [key.replace('inf', 'inf_0') for key in trans_dict_keys]
   n = len(trans_dict_keys)
+  #print trans_dict_keys
   i = 0
   trans_dict_keys = sorted(trans_dict_keys, key=lambda keystring:keystring.split('_')[0]) # first sort by site
   trans_dict_keys = sorted(trans_dict_keys, key=lambda keystring:int(keystring.split('_')[1])) # then sort by milestone
+  #print trans_dict_keys
   #count_dict_keys = sorted(count_dict.keys(), key=lambda keystring:keystring )#int(keystring.split('_')[1])) # then sort by milestone
   #count_dict_keys.sort()
   for key in trans_dict_keys:
@@ -418,20 +420,44 @@ def avg_t_vector(time_dict, index_dict):
   #print "p_matrix", p_matrix
   return np.matrix(t_matrix)
   
+
 def parse_bound_state_args(bound_args):
   bound_dict = {}
   bound_pairs = bound_args.split(',')
   for pair in bound_pairs:
+    print 'PAIR'+ pair
     site_index = pair.split(':')
+    print site_index
     if len(site_index) == 1:
       site = 'all'
       index = site_index[0]
     elif len(site_index) == 2:
       site = site_index[0]
       index = site_index[1]
-    bound_dict[site] = index
-
+    if site not in bound_dict:
+      bound_dict[site] = [index]
+    else:
+      bound_dict[site].append(index)  
+    print bound_dict
   return bound_dict
+
+
+#def parse_bound_state_args(bound_args):
+#  bound_dict = {}
+#  bound_pairs = bound_args.split(',')
+#  for pair in bound_pairs:
+#    print 'PAIR'+ pair
+#    site_index = pair.split(':')
+#    print site_index
+#    if len(site_index) == 1:
+#      site = 'all'
+#      index = site_index[0]
+#    elif len(site_index) == 2:
+#      site = site_index[0]
+#      index = site_index[1]
+#    bound_dict[site] = index
+
+#  return bound_dict
 
 def run_compute_rate_constant(results_filename, browndye_bin_dir=""):
   'runs the Browndye program compute_rate_constant to find the value k(b)'
@@ -954,10 +980,8 @@ def main():
     print "Running k-on calculations."
     calc_type = "on" # by default
     bd_time = 1.0
-    
-  
   bound_dict = parse_bound_state_args(args['bound_states'])
-
+  
   # open milestoning file and parse everything into a full milestoning model
   model = parse_milestoning_file(milestone_filename)
   
