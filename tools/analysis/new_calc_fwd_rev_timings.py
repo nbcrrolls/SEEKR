@@ -11,7 +11,7 @@ import string, re, glob
 import MDAnalysis as mda
 
 OUTPUT_GLOB='*.dcd'
-struct_filename= '../building/holo.parm7'
+struct_filename= '../../building/holo.parm7'
 
 def extract_timings(output_filenames):
   #timing_lines=[]
