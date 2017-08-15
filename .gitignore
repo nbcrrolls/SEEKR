@@ -6,5 +6,7 @@
 bin/namd_template.py
 *.dx
 
+tools/analysis/*.sh
+
 # exclude some specific files
 
