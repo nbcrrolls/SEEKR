@@ -640,6 +640,7 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
         
       if milestone.bd == True and milestone.directory:
         this_counts, this_total_counts, this_total_times, this_avg_times = milestone.get_bd_transition_statistics(bd_time=bd_time)
+        print 'TIME', this_avg_times
         total_counts = add_dictionaries(total_counts, this_total_counts)
         total_times = add_dictionaries(total_times, this_total_times)
         for src_key in this_counts.keys():
