@@ -640,6 +640,7 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
         
       if milestone.bd == True and milestone.directory:
         this_counts, this_total_counts, this_total_times, this_avg_times = milestone.get_bd_transition_statistics(bd_time=bd_time)
+        print 'TIME', this_avg_times
         total_counts = add_dictionaries(total_counts, this_total_counts)
         total_times = add_dictionaries(total_times, this_total_times)
         for src_key in this_counts.keys():
@@ -915,9 +916,9 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
       print "pstat_std:", pstat_std
       print "delta_G_std:", delta_G_std
       
-    final_result = [pstats, pstat_std, delta_G, delta_G_std, index_dict, radius_dict]
-    
-  return final_result # will be different depending on calc_type
+    final_result = [pstats, pstat_std, delta_G, delta_G_std, index_dict, radius_dict] 
+  add_inf = [counts, avg_times, avg_t, K, q0, index_dict]  
+  return final_result, add_inf #will be different depending on calc_type
 
 def main():
   parser = argparse.ArgumentParser(description='Analyzes SEEKR forward phase output to construct milestoning calculations on simulation analysis.')
@@ -997,7 +998,7 @@ def main():
     exit()
   
   # starting kinetics analysis
-  final_result = analyze_kinetics(calc_type, model, bound_dict, doing_error=True, verbose=verbose, bd_time=bd_time,  max_umbrella_steps=None, error_number=error_number, error_skip=error_skip)
+  final_result, add_inf = analyze_kinetics(calc_type, model, bound_dict, doing_error=True, verbose=verbose, bd_time=bd_time,  max_umbrella_steps=None, error_number=error_number, error_skip=error_skip)
   
   if calc_type == "on":
     [k_on, k_on_std, beta, beta_std] = final_result
