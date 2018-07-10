@@ -256,7 +256,7 @@ def parse_milestoning_file(milestoning_filename):
   else: # some old milestones.xml files may not have this tag
     model.xml_md_time_factor = DEFAULT_MD_TIME_FACTOR
     
-  # MD Time Factor
+  # BD Time Factor
   xml_bd_time_factor = root.find('bd_time_factor') # temperature tag
   if xml_bd_time_factor != None: # make sure it exists
     model.bd_time_factor = xml_bd_time_factor.text.strip()
@@ -363,11 +363,9 @@ def trans_dict_to_matrix(trans_dict):
   trans_dict_keys = trans_dict.keys()
   trans_dict_keys = [key.replace('inf', 'inf_0') for key in trans_dict_keys]
   n = len(trans_dict_keys)
-  #print trans_dict_keys
   i = 0
   trans_dict_keys = sorted(trans_dict_keys, key=lambda keystring:keystring.split('_')[0]) # first sort by site
   trans_dict_keys = sorted(trans_dict_keys, key=lambda keystring:int(keystring.split('_')[1])) # then sort by milestone
-  #print trans_dict_keys
   #count_dict_keys = sorted(count_dict.keys(), key=lambda keystring:keystring )#int(keystring.split('_')[1])) # then sort by milestone
   #count_dict_keys.sort()
   for key in trans_dict_keys:
@@ -420,44 +418,20 @@ def avg_t_vector(time_dict, index_dict):
   #print "p_matrix", p_matrix
   return np.matrix(t_matrix)
   
-
 def parse_bound_state_args(bound_args):
   bound_dict = {}
   bound_pairs = bound_args.split(',')
   for pair in bound_pairs:
-    print 'PAIR'+ pair
     site_index = pair.split(':')
-    print site_index
     if len(site_index) == 1:
       site = 'all'
       index = site_index[0]
     elif len(site_index) == 2:
       site = site_index[0]
       index = site_index[1]
-    if site not in bound_dict:
-      bound_dict[site] = [index]
-    else:
-      bound_dict[site].append(index)  
-    print bound_dict
+    bound_dict[site] = index
+
   return bound_dict
-
-
-#def parse_bound_state_args(bound_args):
-#  bound_dict = {}
-#  bound_pairs = bound_args.split(',')
-#  for pair in bound_pairs:
-#    print 'PAIR'+ pair
-#    site_index = pair.split(':')
-#    print site_index
-#    if len(site_index) == 1:
-#      site = 'all'
-#      index = site_index[0]
-#    elif len(site_index) == 2:
-#      site = site_index[0]
-#      index = site_index[1]
-#    bound_dict[site] = index
-
-#  return bound_dict
 
 def run_compute_rate_constant(results_filename, browndye_bin_dir=""):
   'runs the Browndye program compute_rate_constant to find the value k(b)'
@@ -640,7 +614,6 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
         
       if milestone.bd == True and milestone.directory:
         this_counts, this_total_counts, this_total_times, this_avg_times = milestone.get_bd_transition_statistics(bd_time=bd_time)
-        print 'TIME', this_avg_times
         total_counts = add_dictionaries(total_counts, this_total_counts)
         total_times = add_dictionaries(total_times, this_total_times)
         for src_key in this_counts.keys():
@@ -648,7 +621,9 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
             counts[src_key] = add_dictionaries(counts[src_key], this_counts[src_key])
           else:
             counts[src_key] = this_counts[src_key]
-        
+      #print "counts[src_key]"
+      pprint(counts[src_key])
+
   for src_key in total_times.keys(): # construct the average incubation times
     avg_times[src_key] = total_times[src_key] / total_counts[src_key]
 
@@ -707,8 +682,7 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
     trans['inf'] = {'inf':0.0}
     counts['inf'] = {'inf':0}
     avg_times['inf'] = 0.0
-        
-
+    
   elif calc_type == "free_energy": # then the user wants a free energy profile
     trans['inf'] = {'inf':0.0}
     counts['inf'] = {'inf':0}
@@ -859,7 +833,7 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
     
     for i in range(n):
       pstat[i,0] = qstat[i,0] * avg_t[i,0]
-      #print 'pstat of', i, pstat[i,0]
+      
     
     pstat_ref = pstat[bound_indices[0],0]
     for i in range(n):
@@ -873,17 +847,17 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
     delta_Gs = []
     for Q in Q_mats:
       new_K, new_avg_t = rate_mat_to_prob_mat(Q)
-     
+      
       new_K = make_free_energy_profile_boundaries(new_K, bound_indices, inf_index)
       new_pstat = np.matrix(np.zeros((n, 1)))
       new_delta_G = np.matrix(np.zeros((n, 1)))
       new_K_inf = np.matrix(new_K) ** 99999999
       new_qstat = np.dot(new_K_inf,q0)
-     
+      
       for i in range(n):
         new_pstat[i,0] = new_qstat[i,0] * new_avg_t[i]
       pstats.append(new_pstat)
-     
+      
       for i in range(n):
         if new_pstat[i,0] == 0.0:
           new_delta_G[i,0] = 1e99
@@ -916,9 +890,9 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
       print "pstat_std:", pstat_std
       print "delta_G_std:", delta_G_std
       
-    final_result = [pstats, pstat_std, delta_G, delta_G_std, index_dict, radius_dict] 
-  add_inf = [counts, avg_times, avg_t, K, q0, index_dict]  
-  return final_result, add_inf #will be different depending on calc_type
+    final_result = [pstats, pstat_std, delta_G, delta_G_std, index_dict, radius_dict]
+    
+  return final_result # will be different depending on calc_type
 
 def main():
   parser = argparse.ArgumentParser(description='Analyzes SEEKR forward phase output to construct milestoning calculations on simulation analysis.')
@@ -972,7 +946,7 @@ def main():
   if args['off']:
     print "Running k-off calculations."
     calc_type = "off"
-
+    
   elif args['free_energy']:
     print "Running free energy profile calculations."
     calc_type = "free_energy"
@@ -982,8 +956,10 @@ def main():
     print "Running k-on calculations."
     calc_type = "on" # by default
     bd_time = 1.0
-  bound_dict = parse_bound_state_args(args['bound_states'])
+    
   
+  bound_dict = parse_bound_state_args(args['bound_states'])
+
   # open milestoning file and parse everything into a full milestoning model
   model = parse_milestoning_file(milestone_filename)
   
@@ -998,7 +974,7 @@ def main():
     exit()
   
   # starting kinetics analysis
-  final_result, add_inf = analyze_kinetics(calc_type, model, bound_dict, doing_error=True, verbose=verbose, bd_time=bd_time,  max_umbrella_steps=None, error_number=error_number, error_skip=error_skip)
+  final_result = analyze_kinetics(calc_type, model, bound_dict, doing_error=True, verbose=verbose, bd_time=bd_time,  max_umbrella_steps=None, error_number=error_number, error_skip=error_skip)
   
   if calc_type == "on":
     [k_on, k_on_std, beta, beta_std] = final_result
@@ -1027,10 +1003,9 @@ def main():
   if conv_filename:
     print "Writing convergence data to file name:", conv_filename
     final_results = []
-    umbrella_steps_range = range(1, info_dict['max_umbrella_steps'], conv_stride)
+    umbrella_steps_range = range(0, info_dict['max_umbrella_steps'], conv_stride)
     for umbrella_steps in umbrella_steps_range:
-      print 'umbrella steps', umbrella_steps
-      final_result, add_inf = analyze_kinetics(calc_type, model, bound_dict, doing_error=False, verbose=False, bd_time=bd_time,  max_umbrella_steps=umbrella_steps, error_number=1, error_skip=1)
+      final_result = analyze_kinetics(calc_type, model, bound_dict, doing_error=False, verbose=False, bd_time=bd_time,  max_umbrella_steps=umbrella_steps, error_number=1, error_skip=1)
       if calc_type == 'off':
         final_result = map(float, final_result)
       final_results.append(final_result)

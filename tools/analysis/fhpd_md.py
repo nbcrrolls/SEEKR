@@ -6,7 +6,7 @@ import MDAnalysis as mda
 from MDAnalysis import *
 from MDAnalysis.analysis.align import *
 
-FORWARD_GLOB= "forward.*.dcd"
+FORWARD_GLOB= "traj/forward.*.dcd"
 #parmfile_name= "../building/holo.parm7"
 #equil_filename= '../ens_equil/ens_equil_center.dcd'
 #lig_res = "BEN"

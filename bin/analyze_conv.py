@@ -28,6 +28,14 @@ from copy import deepcopy
 import xml.etree.ElementTree as ET
 from subprocess import check_output
 from operator import attrgetter # allows us to sort a list of objects by an object's attribute(s)
+import csv
+from collections import defaultdict
+from itertools import chain
+import pandas as pd
+import matplotlib.pyplot as plt
+import pickle
+import dill
+
 
 k_boltz = 1.3806488e-23
 R_GAS_CONSTANT = 0.0019872 # in kcal/mol*K
@@ -145,13 +153,15 @@ class Milestone():
       unsorted_transitions.append(transition)
       if transition.umbrella_step > info['max_umbrella_steps']:
         info['max_umbrella_steps'] = transition.umbrella_step
+      if transition.velocity_step > info['max_velocity_steps']:
+        info['max_velocity_steps']= transition.velocity_step
       
     # now sort the lines by ID and VEL_ID
     sorted_transitions = sorted(unsorted_transitions, key=attrgetter('umbrella_step', 'velocity_step')) # sort transitions by umbrella_step, then velocity_step
     self.transitions = sorted_transitions
     return info
 
-  def get_md_transition_statistics(self, md_time_factor=DEFAULT_MD_TIME_FACTOR, max_umbrella_step=None):
+  def get_md_transition_statistics(self, md_time_factor=DEFAULT_MD_TIME_FACTOR, max_umbrella_step=None, rand_conv=False, rand_size=10):
     'parse the transition data to obtain transition counts'
     counts = {} # all the sources and their destinations
     total_counts = {} # keeps track of all counts to any destination
@@ -159,29 +169,65 @@ class Milestone():
     avg_times = {} # the times to transition out of each source
     site_index = self.site
     site_name = self.sitename
-    for transition in self.transitions:
+
+    if rand_conv == True:
+      #print 'getting random md for conv'
+      rand_umbrella=np.random.choice(xrange(max_umbrella_step),rand_size)
+      #print rand_umbrella
+      rand_vel= np.random.choice(xrange(10),rand_size) 
+      #print rand_vel
+      for i in range(len(rand_umbrella)):
+        umbrella_num=rand_umbrella[i]
+        vel_num= rand_vel[i]
+        for transition in self.transitions:
+          source = transition.src
+          dest = transition.dest
+          time = transition.time
+          umbrella_step = transition.umbrella_step
+          vel_step = transition.velocity_step
+          if umbrella_step == umbrella_num and vel_step== vel_num:
+            src_key = '%s_%d' % (site_name, source)
+            #dest_key = '%d_%d' % (site_index, dest)
+            dest_key = '%s_%d' % (site_name, dest)
+            if src_key in counts.keys():
+              if dest_key in counts[src_key].keys():
+                counts[src_key][dest_key] += 1
+              else:
+                counts[src_key][dest_key] = 1
+              total_times[src_key] += time * md_time_factor
+              total_counts[src_key] += 1
+            else:
+              counts[src_key] = {dest_key:1}
+              total_counts[src_key] = 1
+              total_times[src_key] = time * md_time_factor
+  
       
-      source = transition.src
-      dest = transition.dest
-      time = transition.time
-      umbrella_step = transition.umbrella_step
-      if max_umbrella_step != None and umbrella_step > max_umbrella_step: # for convergence analysis, we may only want to sample a subset of umbrella steps
-        break
-      #src_key = '%d_%d' % (site_index, source)
-      src_key = '%s_%d' % (site_name, source)
-      #dest_key = '%d_%d' % (site_index, dest)
-      dest_key = '%s_%d' % (site_name, dest)
-      if src_key in counts.keys():
-        if dest_key in counts[src_key].keys():
-          counts[src_key][dest_key] += 1
+
+    else:
+
+      for transition in self.transitions:
+        
+        source = transition.src
+        dest = transition.dest
+        time = transition.time
+        umbrella_step = transition.umbrella_step
+        if max_umbrella_step != None and umbrella_step > max_umbrella_step: # for convergence analysis, we may only want to sample a subset of umbrella steps
+          break
+        #src_key = '%d_%d' % (site_index, source)
+        src_key = '%s_%d' % (site_name, source)
+        #dest_key = '%d_%d' % (site_index, dest)
+        dest_key = '%s_%d' % (site_name, dest)
+        if src_key in counts.keys():
+          if dest_key in counts[src_key].keys():
+            counts[src_key][dest_key] += 1
+          else:
+            counts[src_key][dest_key] = 1
+          total_times[src_key] += time * md_time_factor
+          total_counts[src_key] += 1
         else:
-          counts[src_key][dest_key] = 1
-        total_times[src_key] += time * md_time_factor
-        total_counts[src_key] += 1
-      else:
-        counts[src_key] = {dest_key:1}
-        total_counts[src_key] = 1
-        total_times[src_key] = time * md_time_factor
+          counts[src_key] = {dest_key:1}
+          total_counts[src_key] = 1
+          total_times[src_key] = time * md_time_factor
 
     for src_key in total_times.keys():
       avg_times[src_key] = total_times[src_key] / total_counts[src_key]
@@ -425,9 +471,9 @@ def parse_bound_state_args(bound_args):
   bound_dict = {}
   bound_pairs = bound_args.split(',')
   for pair in bound_pairs:
-    print 'PAIR'+ pair
+   # print 'PAIR'+ pair
     site_index = pair.split(':')
-    print site_index
+   # print site_index
     if len(site_index) == 1:
       site = 'all'
       index = site_index[0]
@@ -438,7 +484,7 @@ def parse_bound_state_args(bound_args):
       bound_dict[site] = [index]
     else:
       bound_dict[site].append(index)  
-    print bound_dict
+   # print bound_dict
   return bound_dict
 
 
@@ -606,7 +652,7 @@ def make_free_energy_profile_boundaries(K, bound_indices, inf_index):
   
 def read_transition_statistics_from_files(model, verbose):
   '''This function parses the transitions statistics from the simulation output files for later analysis'''
-  info = {'max_umbrella_steps':0}
+  info = {'max_umbrella_steps':0, 'max_velocity_steps':0}
   for site in model.sites:
     for milestone in site.milestones:
       if milestone.md == True and milestone.directory:
@@ -615,52 +661,358 @@ def read_transition_statistics_from_files(model, verbose):
         info = milestone.parse_md_transitions(info)
   return info
   
-def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time, max_umbrella_steps = None, error_number = 1, error_skip = 1):
+def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time, max_umbrella_steps = None, error_number = 1, error_skip = 1, milestone_conv='False' ,  conv_stride=50, rand_conv= 'False', rand_samples=10, plt_name= ''):
   '''main function to perform all kinetics analyses.
   Given a Model() object with its statistics filled out, it will return an estimate of the kinetic
   value, given all or a subset of its statistics.
   '''
   counts = {}; total_counts = {}; total_times = {}; avg_times = {}; trans = {}
   end_indeces = []
-  for site in model.sites:
-    for milestone in site.milestones:
-      if milestone.md == True and milestone.directory:
-        if verbose: print 'parsing md transitions for:Anchor', milestone.fullname
-        this_counts, this_total_counts, this_total_times, this_avg_times = milestone.get_md_transition_statistics(model.md_time_factor, max_umbrella_steps) # find the count statistics
-        total_counts = add_dictionaries(total_counts, this_total_counts)
-        total_times = add_dictionaries(total_times, this_total_times)
-        for src_key in this_counts.keys():
-          if src_key in counts.keys():
-            counts[src_key] = add_dictionaries(counts[src_key], this_counts[src_key])
-          else:
-            counts[src_key] = this_counts[src_key]
-        #print "len(transitions)", len(milestone.transitions)
-      if milestone.end == "true": # then its an end milestone, and there will be no transitions out of it
-        end_indeces.append('%d_%d' % (milestone.site, int(milestone.index)))
-        
-      if milestone.bd == True and milestone.directory:
-        this_counts, this_total_counts, this_total_times, this_avg_times = milestone.get_bd_transition_statistics(bd_time=bd_time)
-        print 'TIME', this_avg_times
-        total_counts = add_dictionaries(total_counts, this_total_counts)
-        total_times = add_dictionaries(total_times, this_total_times)
-        for src_key in this_counts.keys():
-          if src_key in counts.keys():
-            counts[src_key] = add_dictionaries(counts[src_key], this_counts[src_key])
-          else:
-            counts[src_key] = this_counts[src_key]
-        
-  for src_key in total_times.keys(): # construct the average incubation times
-    avg_times[src_key] = total_times[src_key] / total_counts[src_key]
 
-  for src_key in counts.keys():
-    temp = {}
-    for dest_key in counts[src_key].keys(): # make the transition probability dictionary
-      temp[dest_key] = float(counts[src_key][dest_key]) / float(total_counts[src_key])
-      #if dest_key in end_indeces: # if this milestone is going toward an end index, then create it in the count matrix and set the time to zero, transitioning to the one it came from # TODO: marked for removal
-        #trans[dest_key] = {src_key: 0.9, dest_key: 0.1}
-        #avg_times[dest_key] = 0.0
-        #pass
-    trans[src_key] = temp
+  rand_conv_avg_times = {}
+  time_samples = defaultdict(list)
+  counts_samples = defaultdict(lambda: defaultdict(list))
+  #counts_samples_out = defaultdict(list)
+  trans_samples = defaultdict(list)
+  master_dict = defaultdict(list)
+  sample_avg = defaultdict(list)
+  sample_max = defaultdict(list)
+  sample_min = defaultdict(list)
+  counts_avg = defaultdict(lambda: defaultdict(list))
+  counts_min = defaultdict(lambda: defaultdict(list))
+  counts_max = defaultdict(lambda: defaultdict(list))
+  #counts_in_avg = defaultdict(list)
+  #counts_in_max = defaultdict(list)
+  #counts_in_min = defaultdict(list)
+  #counts_out_avg = defaultdict(list)
+  #counts_out_max = defaultdict(list)
+  #counts_out_min = defaultdict(list)
+
+  if milestone_conv == True:
+    print'performing per milestone convergence analysis'
+    conv_intervals = np.arange(conv_stride, max_umbrella_steps+conv_stride, conv_stride)
+    print 'convergence intervals', conv_intervals
+    if rand_conv==True:
+      print "performing randomized convergence sampling in each interval with %s samples" % rand_samples 
+      #rand_conv = 'True'
+      samples= rand_samples
+    else:
+      samples=1
+    for interval in conv_intervals:
+      print interval
+    #  time_samples = defaultdict(list)
+    #for sample in range(rand_samples):
+      time_samples = defaultdict(list)
+      counts_samples = defaultdict(lambda: defaultdict(list))
+      #counts_samples_in = defaultdict(list)
+      #counts_samples_out = defaultdict(list)
+      #trans_samples = defaultdict(list)
+      anch_dict = defaultdict(list)
+      #for interval in rand_intervals:
+      for sample in range(samples):
+      #  sample_avg = defaultdict(list)
+      #  sample_max = defaultdict(list)
+      #  sample_min = defaultdict(list)
+        for site in model.sites:
+          for milestone in site.milestones:
+            if milestone.md == True and milestone.directory:
+              if verbose: print 'parsing md transitions for:Anchor', milestone.fullname
+              if rand_conv==True:
+                this_counts, this_total_counts, this_total_times, this_avg_times = milestone.get_md_transition_statistics(model.md_time_factor, max_umbrella_steps, rand_conv, rand_samples) # find the count statistics
+              else:
+                this_counts, this_total_counts, this_total_times, this_avg_times = milestone.get_md_transition_statistics(model.md_time_factor, interval, rand_conv, rand_samples) # find the count statistics
+
+              #for var in this_counts, this_total_counts, this_total_times, this_avg_times:
+                 
+              total_counts = add_dictionaries(total_counts, this_total_counts)
+              total_times = add_dictionaries(total_times, this_total_times)
+              for src_key in this_counts.keys():
+                if src_key in counts.keys():
+                  counts[src_key] = add_dictionaries(counts[src_key], this_counts[src_key])
+                else:
+                  counts[src_key] = this_counts[src_key]
+              #print "len(transitions)", len(milestone.transitions)
+            if milestone.end == "true": # then its an end milestone, and there will be no transitions out of it
+              end_indeces.append('%d_%d' % (milestone.site, int(milestone.index)))
+  
+            if milestone.bd == True and milestone.directory:
+              this_counts, this_total_counts, this_total_times, this_avg_times = milestone.get_bd_transition_statistics(bd_time=bd_time)
+              #print 'TIME', this_avg_times
+              total_counts = add_dictionaries(total_counts, this_total_counts)
+              total_times = add_dictionaries(total_times, this_total_times)
+              for src_key in this_counts.keys():
+                if src_key in counts.keys():
+                  counts[src_key] = add_dictionaries(counts[src_key], this_counts[src_key])
+                else:
+                  counts[src_key] = this_counts[src_key]
+        for src_key in total_times.keys(): # construct the average incubation times
+          avg_times[src_key] = total_times[src_key] / total_counts[src_key]
+    
+        for src_key in counts.keys():
+          temp = {}
+          for dest_key in counts[src_key].keys(): # make the transition probability dictionary
+            temp[dest_key] = float(counts[src_key][dest_key]) / float(total_counts[src_key])
+          trans[src_key] = temp
+
+## Here I have avg_times which is a dict where the keys are anchors and the values are the avg time from a single random interval
+##still inside interval loop
+
+#        for key, value in chain(avg_times.iteritems()):
+#          #print key, interval, sample 
+#          time_samples[key].append(value)
+#        for milestone in site.milestones:
+#          #print milestone.sitename
+#          #print milestone.index
+#          #print milestone.site
+#          name= "_".join((milestone.sitename, milestone.index))
+#          #print name
+#          if name not in avg_times.keys():
+#            time_samples[name].append(np.nan) 
+#        for src_key, dest_keys in counts.iteritems():
+#          total_in_counts=0
+#          total_out_counts=0
+#          print src_key, dest_keys
+#          for dest_key, val in dest_keys.iteritems():
+#            #print dest_key, val
+#            if src_key == 'inf':
+#              total_out_counts+=val
+#              #counts_samples_out[src_key].append(val)
+#            elif dest_key == 'inf':
+#              total_in_counts+= val
+#              #counts_samples_in[src_key].append(val)
+#            elif src_key.split("_")[1] > dest_key.split("_")[1]:
+#              total_in_counts+= val
+#              #counts_samples_in[src_key].append(val)
+#            elif src_key.split("_")[1] < dest_key.split("_")[1]:
+#              total_out_counts+= val
+#              #counts_samples_out[src_key].append(val)
+#            else:
+#              print "ERROR: transition cannot be assigned"
+#         # print src_key, total_out_counts
+#          counts_samples_out[src_key].append(total_out_counts)
+#          counts_samples_in[src_key].append(total_in_counts)
+
+        for key, value in chain(avg_times.iteritems()):
+          #print key, interval, sample 
+          time_samples[key].append(value)
+#        for milestone in site.milestones:
+          #print milestone.sitename
+          #print milestone.index
+          #print milestone.site
+          name= "_".join((milestone.sitename, milestone.index))
+          #print name
+          if name not in avg_times.keys():
+            time_samples[name].append(np.nan)
+        for src_key, dest_keys in counts.iteritems():
+        #  total_in_counts=0
+        #  total_out_counts=0
+          #print src_key, dest_keys
+          for dest_key, val in dest_keys.iteritems():
+       #     print src_key, dest_key, val
+         # print src_key, total_out_counts
+            counts_samples[src_key][dest_key].append(val)
+
+
+        for milestone in site.milestones:
+          #print milestone.sitename
+          #print milestone.index
+          #print milestone.site
+          name= "_".join((milestone.sitename, milestone.index))
+          #print name
+          if name not in avg_times.keys():
+            time_samples[name].append(np.nan)
+
+          for milestone2 in site.milestones:
+            dest_name = "_".join((milestone2.sitename, milestone2.index))
+            if dest_name not in counts_samples[name].keys() and name != dest_name: 
+              counts_samples[name][dest_name].append(0)
+          
+
+
+
+               #counts_samples[milestone][dest].append(0)
+          #if name not in counts_samples.keys():
+          #  counts_samples[name].append(0)
+          #if name not in counts_samples_in.keys():
+          #  counts_samples_in[name].append(0)
+            
+
+
+        #print 'IN', counts_samples_in
+        #print 'OUT', counts_samples_out
+        #print 'TIMES', time_samples
+
+
+
+      for key, val in chain(time_samples.iteritems()):
+        sample_avg[key].append(np.nanmean(val))
+        sample_max[key].append(np.nanmax(val))
+        sample_min[key].append(np.nanmin(val))
+        #print 'TIME', key, val
+      for src, dest in chain(counts_samples.iteritems()):
+        for key, val in chain(dest.iteritems()):
+      #    print src, key, val
+          counts_avg[src][key].append(np.mean(val))
+          counts_max[src][key].append(np.max(val))
+          counts_min[src][key].append(np.min(val))
+      #for key, val in chain(counts_samples_out.iteritems()):
+      #  counts_out_avg[key].append(np.nanmean(val))
+      #  counts_out_max[key].append(np.nanmax(val))
+      #  counts_out_min[key].append(np.nanmin(val))
+      #print sample_avg
+      #print counts_in_avg
+      #print counts_out_avg
+      
+      #for key, value in chain(counts.iteritems()):
+      #  print 'COUNTS', key, val
+      #for key, value in chain(trans.iteritems()):
+      #  print 'TRANS', key, val
+
+      #  print key, interval, 'max', sample_max[key], 'avg', sample_avg[key], 'min', sample_min[key]
+     # print 'interval', interval
+     # print 'sample_avg', sample_avg
+     # print 'sample_max', sample_max
+     # print 'sample_min', sample_min
+     # print 'counts_avg', counts_avg
+     # print 'counts_min', counts_min
+     # print 'counts_max', counts_max
+      #print trans_samples
+    zero_list = [0] * len(conv_intervals)
+    keys_to_remove=defaultdict(list)
+    for src, dest in chain(counts_avg.iteritems()):
+        for key, val in chain(dest.iteritems()):
+          if val == zero_list:
+           #print src, key, val
+           keys_to_remove[src].append(key)
+           
+           #del key
+           #del counts_min[src][key]
+           #del counts_max[src][key]
+    #print keys_to_remove
+    for key, vals in chain(keys_to_remove.iteritems()):
+      for val in vals:
+     #   print key, val
+        del counts_avg[key][val]
+        del counts_min[key][val]
+        del counts_max[key][val]
+
+    #print counts_avg
+    data ={}
+    data['time_samples'] = time_samples
+    data['counts_avg'] = counts_avg
+    data['counts_min'] = counts_min
+    data['counts_max'] = counts_max
+    #data['counts_out_avg'] = counts_out_avg
+    #data['counts_out_min'] = counts_out_min
+    #data['counts_out_max'] = counts_out_max
+    data['trans_samples'] = trans_samples
+    data['sample_min']= sample_min
+    data['sample_max']= sample_max
+    data['sample_avg']= sample_avg
+    data['conv_intervals']=conv_intervals
+    pickle.dump(data, open('conv_data.pkl', 'wb'))
+    plot_rand_conv(sample_min, sample_max, sample_avg, conv_intervals, plt_name)
+    plot_trans_conv(counts_avg, counts_min,counts_max, conv_intervals, plt_name)
+
+## Depriciated-- marked for removal----------------------------------------------------------------------------------------------
+## now I have created the time samples dict whose keys are anchors and the values are the list of avg times for all intervals
+## outside interval loop but still inside sample loop
+      #for key, val in chain(time_samples.iteritems()):
+      #  master_dict[key].append(pd.DataFrame.from_dict({sample:val}))
+      #print master_dict
+      #for key, val in chain(time_samples.iteritems()):
+        #print time_samples[key]
+        #df = pd.DataFrame(val) 
+      #  anch_dict[key]=pd.DataFrame.append(val)
+      #print anch_dict 
+    #for key, val in chain(master_dict.iteritems()):
+      #for key2, val2 in chain(master_dict[key].iteritems()):
+        
+      #master_dict[key]=pd.DataFrame(val)
+    #  print key
+    #  print master_dict[key]
+    #print master_dict
+
+
+      #print 'SAMPLE', sample
+      #print df
+      #master_dict[sample] = df
+    #print master_dict
+        #print 'sample', sample, 'interval ', interval
+        #print time_samples
+      
+      #for key, value in chain(time_samples.iteritems()):
+      #  master_dict[key].append({sample:value})
+      #print master_dict
+      #rand_conv_avg_times[sample]= time_samples 
+      #rand_conv_avg_times[interval]= time_samples
+      #for key, value in chain(time_samples.items()):
+      #  rand_conv_avg_times[key].append(value)
+     
+      #for key,value in chain(rand_conv_avg_times.items()):
+
+
+    #outfile = csv.writer(open('rand_conv.csv', 'w'))
+    #for key, val in .items():
+    #  outfile.writerow([key,str(val).strip('[]')])
+
+    #outfile = open('rand_conv.csv', 'w')
+    #for key, val in master_dict.items():
+    #  outfile.write(str(key)+'\n')
+    #  for key2, val2 in val.items():
+    #    outfile.write('{0}, {1}\n'.format(key2, str(val2).strip('""[]')))
+        #outfile.write([key2,str(val2).strip('[]')])
+
+    #for key, val in rand_conv_avg_times.items():
+    #  outfile.write(str(key)+'\n')
+    #  for key2, val2 in val.items():
+    #    outfile.write('{0}, {1}\n'.format(key2, str(val2).strip('""[]')))
+        #outfile.write([key2,str(val2).strip('[]')])
+
+    #frame= pd.DataFrame.from_dict(master_dict)
+    #print frame
+    #frame.to_csv('rand_conv.csv', sep= '\t')
+ 
+  else: 
+    for site in model.sites:
+      for milestone in site.milestones:
+        if milestone.md == True and milestone.directory:
+          if verbose: print 'parsing md transitions for:Anchor', milestone.fullname
+          this_counts, this_total_counts, this_total_times, this_avg_times = milestone.get_md_transition_statistics(model.md_time_factor, max_umbrella_steps, rand_conv, rand_size=0) # find the count statistics
+          total_counts = add_dictionaries(total_counts, this_total_counts)
+          total_times = add_dictionaries(total_times, this_total_times)
+          for src_key in this_counts.keys():
+            if src_key in counts.keys():
+              counts[src_key] = add_dictionaries(counts[src_key], this_counts[src_key])
+            else:
+              counts[src_key] = this_counts[src_key]
+          #print "len(transitions)", len(milestone.transitions)
+        if milestone.end == "true": # then its an end milestone, and there will be no transitions out of it
+          end_indeces.append('%d_%d' % (milestone.site, int(milestone.index)))
+          
+        if milestone.bd == True and milestone.directory:
+          this_counts, this_total_counts, this_total_times, this_avg_times = milestone.get_bd_transition_statistics(bd_time=bd_time)
+         # print 'TIME', this_avg_times
+          total_counts = add_dictionaries(total_counts, this_total_counts)
+          total_times = add_dictionaries(total_times, this_total_times)
+          for src_key in this_counts.keys():
+            if src_key in counts.keys():
+              counts[src_key] = add_dictionaries(counts[src_key], this_counts[src_key])
+            else:
+              counts[src_key] = this_counts[src_key]
+          
+    for src_key in total_times.keys(): # construct the average incubation times
+      avg_times[src_key] = total_times[src_key] / total_counts[src_key]
+  
+    for src_key in counts.keys():
+      temp = {}
+      for dest_key in counts[src_key].keys(): # make the transition probability dictionary
+        temp[dest_key] = float(counts[src_key][dest_key]) / float(total_counts[src_key])
+        #if dest_key in end_indeces: # if this milestone is going toward an end index, then create it in the count matrix and set the time to zero, transitioning to the one it came from # TODO: marked for removal
+          #trans[dest_key] = {src_key: 0.9, dest_key: 0.1}
+          #avg_times[dest_key] = 0.0
+          #pass
+      trans[src_key] = temp
   
   # b-surface milestone
   b_surface_counts, b_surface_total_counts, b_surface_total_times, b_surface_avg_times = model.b_surface_milestone.get_bd_transition_statistics("results.xml", bd_time=bd_time)
@@ -917,8 +1269,79 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
       print "delta_G_std:", delta_G_std
       
     final_result = [pstats, pstat_std, delta_G, delta_G_std, index_dict, radius_dict] 
-  add_inf = [counts, avg_times, avg_t, K, q0, index_dict]  
+  add_inf = [counts, avg_times, avg_t, K, q0, index_dict, max_umbrella_steps]  
   return final_result, add_inf #will be different depending on calc_type
+
+def plot_rand_conv(sample_max,sample_min, sample_avg, rand_int, plot_name = ""):
+  fig= plt.figure()
+  cm = plt.get_cmap('tab20')
+  NUM_COLORS=len(sample_avg.keys())
+  ax = fig.add_subplot(1,1,1)
+    #axs[i].set_prop_cycle('color', 'tab20')
+    #axs.set_title('%s'% (lig_list[i]),size = 12)   #axs[i].set_xlabel("Number of Random Reversals")
+    #axs[i].set_ylabel("Incubation Time (fs)")
+
+  ax.set_color_cycle([cm(1.*j/NUM_COLORS) for j in range(NUM_COLORS)])
+
+  lines1= []
+  lines2= []
+  for key, val in chain(sample_avg.iteritems()):
+    ax.semilogy(rand_int, val, label = key, linestyle='-', marker="o", markersize = 3)
+    ax.fill_between(rand_int,sample_min[key],sample_max[key], alpha = 0.4)
+        #if key in {'site1_0', 'site1_1', 'site1_2', 'site1_3', 'site1_4', 'site1_5', 'site1_6', 'site1_7', 'site1_8'}:
+        #  lines1 += axs[i].semilogy(rand_int, val, label = key, linestyle='-')
+        #  axs[i].fill_between(rand_int,sample_min[key],sample_max[key], alpha = 0.4)
+        #else:
+        #  lines2 += axs[i].semilogy(rand_int, val, label = key, linestyle='--')
+        #  axs[i].fill_between(rand_int,sample_min[key],sample_max[key], alpha = 0.4)
+
+
+    #handels, labels = axs[i].get_legend_handles_labels()
+    #labels, handels = zip(*natsorted(zip(labels, handels), key=lambda t: t[0]))
+    #lgd1=fig.legend(handels, labels,bbox_to_anchor=(1.05, 0.95),ncol=1, loc=2, borderaxespad=0.)
+#fig.text(0.5,0.96,'Incubation Time Convergence', ha='center', size = 18)
+#fig.text(0.5, 0.04, 'Number of Random Reversals', ha='center', size = 14)
+#fig.text(0.04, 0.7, 'Incubation Time (fs)', ha='center', rotation='vertical', size= 14)
+
+
+  plt.xlabel("Number of Reversals")
+  plt.ylabel("Incubation Time (fs)")
+  plt.title("%s Incubation Time Convergence" %plot_name)
+  #num_colors= len(sample_avg.keys())
+  #plt.set_color_cycle([cm(1.*j/num_colors) for j in range(num_colors)])
+  
+  #for key, val in chain(sample_avg.iteritems()):
+  #  fig= plt.semilogy(rand_int, val, label = key)
+  #  plt.fill_between(rand_int,sample_min[key],sample_max[key], alpha = 0.4)
+  lgd1=plt.legend(bbox_to_anchor=(1.05, 0.95),ncol=1, loc=2, borderaxespad=0.)
+  plt.savefig('%s_Incubation_Time_Convergence.png' %plot_name, bbox_extra_artists=(lgd1,), bbox_inches='tight', format='png', dpi=300 ) 
+  pickle.dump(fig, open('time_conv.fig.pickle', 'wb'))
+  plt.close(fig)
+
+
+def plot_trans_conv(counts_avg, counts_min,counts_max, rand_int, plot_name = ""): 
+  fig= plt.figure()
+  cm = plt.get_cmap('tab20')
+  #NUM_COLORS=len(
+  plt.xlabel("Number of Reversals")
+  plt.ylabel("transition counts")
+  plt.title("%s Transition Convergence" %plot_name)
+
+
+  #ax.set_color_cycle([cm(1.*j/NUM_COLORS) for j in range(NUM_COLORS)]
+  for src, dest in chain(counts_avg.iteritems()):
+    for key, val in chain(dest.iteritems()):
+      fig= plt.semilogy(rand_int, val, label = '%s to %s' %(src, key), marker='^', linestyle='-')
+      plt.fill_between(rand_int,counts_min[src][key],counts_max[src][key], alpha = 0.4)
+  #for key, val in chain(counts_out_avg.iteritems()):
+  #  fig= plt.semilogy(rand_int, val, label = key, marker = 'o', linestyle='--')
+  #  plt.fill_between(rand_int,counts_out_min[key],counts_out_max[key], alpha = 0.4)
+  lgd1=plt.legend(bbox_to_anchor=(1.05, 0.95),ncol=1, loc=2, borderaxespad=0.)
+  plt.savefig('%s_transition_Convergence.png' %plot_name, bbox_extra_artists=(lgd1,), bbox_inches='tight', format='png', dpi=300 )
+  pickle.dump(fig, open('trans_conv.fig.pickle', 'wb'))
+  #plt.close(fig)
+   
+  #return 
 
 def main():
   parser = argparse.ArgumentParser(description='Analyzes SEEKR forward phase output to construct milestoning calculations on simulation analysis.')
@@ -927,6 +1350,7 @@ def main():
   onoff_group.add_argument('--on', dest="on", default=True, help="Perform a k-on calculation - where a low state is the sink", action="store_true")
   onoff_group.add_argument('--off', dest="off", default=False, help="Perform a k-off calculation - where a high state is the sink", action="store_true")
   onoff_group.add_argument('--free_energy', dest="free_energy", default=False, help="Calculate a free energy profile - where there are no sinks", action="store_true")
+  onoff_group.add_argument('--milestone_conv', dest='milestone_conv', default=False, help="If we are computing convergence properties for each milestone", action="store_true" )
   parser.add_argument('-m', '--milestones', dest="milestones", type=str, help="Milestones file") # This should contain most of what the user needs
   parser.add_argument('-b', '--bound_states', dest="bound_states", type=str, default="0", help="The milestone index of the bound state(s). If different bound states exist for different sites, then separate with a colon. For multiple bound states, separate with commas. Examples: '0', '1:2', '0:1,1:3'.")
   # TODO: escape state?
@@ -939,6 +1363,11 @@ def main():
   parser.add_argument('-i','--info', dest="info", help="Print information on transitions without computing anything, including the number of transition statistics read.", action="store_true")
   parser.add_argument('--conv_filename', dest='conv_filename', type=str, default="", help="If provided, an analysis of convergence of the computed value will be performed, and the results will be written to the specified file." )
   parser.add_argument('--conv_stride', dest='conv_stride', type=int, default=100, help="The stride through umbrella sampling statistics when a convergence analysis is being performed." )
+  parser.add_argument('--rand_conv', dest='rand_conv', default=False,action="store_true", help="If we are computing randomized convergence properties" )
+  #parser.add_argument('--rand_conv_int', dest='rand_conv_int', type= int, default=10, help="Interval to generate randomized transition sampling over" )
+  parser.add_argument('--rand_conv_samples', dest='rand_conv_samples', type= int, default=0, help="number of random samples to take at each convergence interval" )
+  parser.add_argument('--plt_name', dest='plt_name', type= str, default='', help="system name for use in plot titles" )
+
 
   args = parser.parse_args()
   args = vars(args) # convert to a dictionary
@@ -968,6 +1397,8 @@ def main():
   error_number = args['error_number']
   conv_filename = args['conv_filename']
   conv_stride = args['conv_stride']
+  milestone_conv= args['milestone_conv']
+  #rand_conv= args['rand_conv']
   
   if args['off']:
     print "Running k-off calculations."
@@ -977,7 +1408,11 @@ def main():
     print "Running free energy profile calculations."
     calc_type = "free_energy"
     assert not conv_filename, "Alert: free energy profile not currently supported in convergence mode. Please leave --conv_filename argument blank. Aborting..."
-    
+  
+  elif args['milestone_conv']:
+    calc_type= "off"
+  #rand_conv= args['rand_conv']
+  
   else:
     print "Running k-on calculations."
     calc_type = "on" # by default
@@ -1023,32 +1458,61 @@ def main():
         radius = radius_dict[index_dict[i]]
       if delta_G[i,0] >= 1e99: continue # don't print huge numbers
       print '%s\t%2.3f\t%2.3f' % (radius, delta_G[i,0], delta_G_std[i,0])
-  
+
+
+  #rand_conv=args['rand_conv']
+  if milestone_conv ==True:
+    print "writing convergence data for randomly selected trajectories"
+    final_results = []
+    final_times = []
+    rand_conv= args['rand_conv']
+    rand_conv_samples= args['rand_conv_samples']
+    plt_name = args['plt_name']
+
+    #umbrella_steps_range = range(1, info_dict['max_umbrella_steps'], conv_stride)
+    #for umbrella_steps in umbrella_steps_range:
+   #   print 'umbrella steps', umbrella_steps
+    #max_steps= info_dict['max_umbrella_steps']*(info_dict['max_velocity_steps']+1)
+    max_steps= info_dict['max_umbrella_steps']
+    #print 'max_umbrella_steps: ', info_dict['max_umbrella_steps']
+    #print 'max_velocity_steps: ', info_dict['max_velocity_steps']
+    #print 'total reversals available: ', max_steps+(info_dict['max_velocity_steps']+1)
+    
+    final_result, add_inf = analyze_kinetics(calc_type, model, bound_dict, doing_error=False, verbose=False, bd_time=bd_time,  max_umbrella_steps=max_steps, error_number=1, error_skip=1,milestone_conv=milestone_conv, conv_stride=conv_stride, rand_conv = rand_conv, rand_samples = rand_conv_samples, plt_name = plt_name  )
+    if calc_type == 'off':
+        final_result = map(float, final_result)
+    final_results.append(final_result)
+
+     
   if conv_filename:
     print "Writing convergence data to file name:", conv_filename
     final_results = []
-    umbrella_steps_range = range(1, info_dict['max_umbrella_steps'], conv_stride)
+    umb_steps= []
+    print "Maximum Umbrella Steps: ", info_dict['max_umbrella_steps']
+    #max_vel_steps= info_dict['max_velocity_steps']
+    umbrella_steps_range = range(conv_stride, info_dict['max_umbrella_steps']+conv_stride, conv_stride)
     for umbrella_steps in umbrella_steps_range:
       print 'umbrella steps', umbrella_steps
       final_result, add_inf = analyze_kinetics(calc_type, model, bound_dict, doing_error=False, verbose=False, bd_time=bd_time,  max_umbrella_steps=umbrella_steps, error_number=1, error_skip=1)
       if calc_type == 'off':
         final_result = map(float, final_result)
       final_results.append(final_result)
-      
+      umb_steps.append(add_inf[6])
+ 
     if calc_type == 'on':
-      header_list = ['k_on','k_on_std','beta','beta_std']
+      header_list = ['umbrella_steps','k_on','k_on_std','beta','beta_std']
       
     if calc_type == 'off':
-      header_list = ['k_off', 'k_off_std', 'mfpt', 'mfpt_std']
+      header_list = ['umbrella_steps', 'k_off', 'k_off_std', 'mfpt', 'mfpt_std']
       
     if calc_type == 'free_energy':
-      header_list = ['pstats', 'pstat_std', 'delta_G', 'delta_G_std', 'index_dict', 'radius_dict']
+      header_list = ['umbrella_steps', 'pstats', 'pstat_std', 'delta_G', 'delta_G_std', 'index_dict', 'radius_dict']
       
       
     conv_file = open(conv_filename, 'w')
     conv_file.write('\t'.join(header_list) + '\n')
     for i in range(len(final_results)):
-      conv_file.write('\t'.join(map(str, final_results[i])) + '\n')
+      conv_file.write(str(umb_steps[i])+'\t'+'\t'.join(map(str, final_results[i])) + '\n')
     
     conv_file.close()
   
