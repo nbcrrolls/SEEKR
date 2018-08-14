@@ -31,7 +31,7 @@ from operator import attrgetter # allows us to sort a list of objects by an obje
 import csv
 from collections import defaultdict
 from itertools import chain
-import pandas as pd
+#import pandas as pd
 import matplotlib.pyplot as plt
 import pickle
 import dill
