@@ -114,6 +114,7 @@ class Anchor():
     self.site = siteindex
     self.sitename = sitename
     self.total_steps = 0
+    self.offsets = {}
 
   def add_milestone(self, milestone):
     self.milestones.append(milestone)
@@ -127,8 +128,11 @@ class Anchor():
     # read files and sift out the transition lines
     transition_lines = [] # a list of transitions by milestone for easy rearrangement later for convergence analysis
     vt_collisions = []
+    replicate = 1
+    self.offsets[replicate] = 0
+    #print 'current max step' , info['max_steps']
     for filename in forward_output_filenames:
-      file_max_steps = 0
+      file_max_steps = 0  
       print 'parsing transitions from file:', filename
       for line in open(filename,'r'):
         if re.match(GRID_TRANSITION_COMPILE, line):
@@ -145,6 +149,7 @@ class Anchor():
       unsorted_transitions = []
       for line in transition_lines:
         transition = Transition(line)
+        transition.replicate = replicate
         unsorted_transitions.append(transition)
         #if transition.cur_step > info['max_steps']:
         #  info['max_steps'] = transition.cur_step
@@ -155,18 +160,23 @@ class Anchor():
       unsorted_collisions = []
       for line in vt_collisions:
         collision = Collision(line)
+        collision.replicate = replicate
         unsorted_collisions.append(collision)
       file_max_steps = collision.step
+      
       print "steps: " , file_max_steps  
       
     # now sort the lines by ID and VEL_ID
     #sorted_transitions = sorted(unsorted_transitions, key=attrgetter('umbrella_step', 'velocity_step')) # sort transitions by umbrella_step, then velocity_step
    
-      self.total_steps += file_max_steps 
+      self.total_steps += file_max_steps
+      self.offsets[replicate+1] = self.offsets[replicate]+file_max_steps 
+      replicate += 1
     print "total steps for anchor:" , self.total_steps  
     self.transitions = unsorted_transitions
     self.collisions = unsorted_collisions
     info['max_steps'] = self.total_steps
+    print 'anchor', self.index, self.offsets
     return info
 
   def get_md_transition_statistics(self, md_time_factor=DEFAULT_MD_TIME_FACTOR, max_step=None, ):
@@ -180,7 +190,7 @@ class Anchor():
     site_index = self.site
     site_name = self.sitename
    
-    trans_count = 0 
+    #print "offsets", self.site, self.offsets 
     for transition in self.transitions:
  
       source = transition.src
@@ -194,8 +204,10 @@ class Anchor():
       dest_key = dest
       #src_key = '%s_%d' % (site_name, source)
       #dest_key = '%s_%d' % (site_name, dest)
+      #print 'max_step', max_step
+      #print 'step + offset', int(stepnum + self.offsets[transition.replicate])
 
-      if max_step != None and stepnum > max_step:
+      if max_step != None and int(stepnum + self.offsets[transition.replicate]) > max_step:
         break
       #print self.index, src_key, dest_key
       if self.index in counts.keys():
@@ -241,7 +253,7 @@ class Anchor():
     
     cell_counts = {}
     for collision in self.collisions:
-      if max_step != None and int(collision.step) > max_step:
+      if max_step != None and int(collision.step + self.offsets[collision.replicate]) > max_step:
         break
 
       curr_cell = collision.curr_cell
@@ -253,8 +265,9 @@ class Anchor():
           cell_counts[curr_cell][new_cell] = 1
       else:
         cell_counts[curr_cell] = {new_cell:1} 
-    total_time = self.total_steps * md_time_factor
-    print total_time
+    total_time = collision.step + self.offsets[collision.replicate]
+    #total_time = self.total_steps * md_time_factor
+    print 'vt_collisions total time',total_time
     return cell_counts, total_time
     
     
@@ -559,18 +572,19 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
   counts = {}; times = {}; total_counts = {}; total_cell_counts = {}; total_times = {}; avg_times = {}; trans = {}; total_cell_times = {}
   end_indeces = [];
   N = {}
-  #print max_steps 
+  print 'max_steps', max_steps 
   for site in model.sites:
     for anchor in site.anchors:
       if anchor.md == True and anchor.directory:
-        if verbose: print 'parsing md transitions for: Anchor', anchor.fullname
+        print 'Anchor', anchor.fullname
         this_counts, this_total_counts, this_total_times, this_avg_times = anchor.get_md_transition_statistics(model.md_time_factor, max_steps)
         this_cell_counts, this_cell_time = anchor.get_md_vt_collisions(model.md_time_factor, max_steps)
         total_counts = add_dictionaries(total_counts, this_total_counts)
-        #print this_counts
+        print 'counts',  this_counts
         total_cell_counts = add_dictionaries(total_cell_counts, this_cell_counts)
         total_cell_times[int(anchor.index)] = this_cell_time
-        #print this_total_times
+        print 'times', this_total_times
+        print 'cell times', total_cell_times
         #total_times = add_dictionaries(total_times, this_total_times)
         #total_cell_times = add_dictionaries(total_cell_times, this_cell_times)
         for src_key in this_counts.keys():
