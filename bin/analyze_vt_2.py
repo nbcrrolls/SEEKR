@@ -34,6 +34,7 @@ INITIAL_COLLISION_COMPILE = re.compile(INITIAL_COLLISION)
 
 FORWARD_OUTPUT_GLOB = "vt_milestoning_*.out.results"
 
+
 def boolean(arg):
   if str(arg).lower() in ("false","", "0", "0.0", "[]", "()", "{}"):
     return False
@@ -692,27 +693,36 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
     #print delta_G[i]
 
 
-  #print "Delta G: "; pprint(delta_G)
+  print "Delta G: "; pprint(delta_G)
 ## Using the V cell equilibrium probabilities, calculate the rate matrix, Q
   print "counts: ", counts
   print "times: ", times
 
   N = np.zeros((len(p_equil)+1,len(p_equil)+1))
+  N_conv = np.zeros((len(p_equil)+1,len(p_equil)+1))
   for anchor in counts.keys():
     for src in counts[anchor].keys():
       for dest in counts[anchor][src].keys():
         #print p_equil[int(anchor)]
         #print counts[anchor][src][dest]
         #print total_cell_times[int(anchor)]
-        N[src][dest] = p_equil[int(anchor)] * float(counts[anchor][src][dest])/ total_cell_times[int(anchor)] 
-      
-      
+        N[src][dest] = p_equil[int(anchor)] * float(counts[anchor][src][dest])/ total_cell_times[int(anchor)]
+        if total_cell_times[int(anchor)] >= max_steps: 
+          N_conv[src][dest] = float(counts[anchor][src][dest])/ total_cell_times[int(anchor)]
+        else:
+         N_conv[src][dest] = np.nan      
+
   print "N:", N
 
   R = np.zeros(len(p_equil)+1)
+  R_conv = np.zeros((len(p_equil)+1,len(p_equil)+1))
   for anchor in times.keys():
     for src in times[anchor].keys(): 
       R[src] += (p_equil[int(anchor)] * times[anchor][src]/ total_cell_times[int(anchor)])
+      if total_cell_times[int(anchor)] >= max_steps:
+        R_conv[int(anchor)][src] = times[anchor][src]/ total_cell_times[int(anchor)] 
+      else:
+        R_conv[int(anchor)][src] = np.nan
 
   print "R:", R
 
@@ -734,7 +744,7 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
 # Calculate MFPT and off rate
   Q_hat = Q[:-1,:-1]
 
-  #print Q_hat
+  print Q_hat
 
   #print np.shape(Q)
   #print np.shape(Q_hat)
@@ -765,9 +775,62 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
 
  
 
-  return p_equil, N, R, T 
+  return p_equil, N, R, T, N_conv, R_conv, k_cell, p_equil 
 
 
+def plot_conv(N_conv, R_conv, k_conv, conv_intervals, k_cell_conv, p_equil_conv):
+  fig= plt.figure()
+  cm = plt.get_cmap('tab20')
+  ax = fig.add_subplot(3,1,1)
+  NUM_COLORS=14
+  ax.set_color_cycle([cm(1.*j/NUM_COLORS) for j in range(NUM_COLORS)])
+  for i in range(N_conv.shape[0]):
+    for j in range(N_conv.shape[1]):
+        if np.sum(N_conv[i][j][:]) != 0:
+          label_string = 'Src: '+str(i) +',' + 'Dest: '+str(j)
+          ax.plot(np.multiply(conv_intervals,2e-6), N_conv[i][j][:], label = label_string ,linestyle='-', marker="o", markersize = 3)
+  ax.set_ylabel('N/T')
+  ax.set_xlabel('time (ns)')
+  #ax_settitle('Transition Count Convergence')
+  box = ax.get_position()
+  ax.set_position([box.x0,box.y0, box.width * 0.8, box.height])
+  lgd1 = ax.legend(loc ='center left', bbox_to_anchor=(1, 0.5), ncol = 2)  
+  ax.grid(b=True,axis = 'y', which = 'both')
+
+  ax2 = fig.add_subplot(3,1,2)
+  ax2.set_color_cycle([cm(1.*j/NUM_COLORS) for j in range(NUM_COLORS)])
+  for i in range(R_conv.shape[0]):
+    for j in range(R_conv.shape[1]):
+      if np.sum(R_conv[i][j][:]) != 0:
+        label_string_2 = 'anchor ' +str(i) + ',' + 'Milestone '+str(j)
+        ax2.plot(np.multiply(conv_intervals,2e-6), R_conv[i][j][:], label = label_string_2 ,linestyle='-', marker="o", markersize = 3)
+  box = ax2.get_position()
+  ax2.set_position([box.x0,box.y0, box.width * 0.8, box.height])
+  lgd2 = ax2.legend(loc ='center left', bbox_to_anchor=(1, 0.5), ncol = 2)
+  ax2.set_ylabel('R/T')
+  ax2.set_xlabel('time (ns)')
+  ax2.grid(b=True ,axis = 'y', which = 'both')
+  #ax2_settitle('Incubation Time Convergence')
+
+## k_cell and p_equil conv plots go here
+
+
+  ax3 = fig.add_subplot(3,1,3)
+  ax3.plot(np.multiply(conv_intervals,2e-6), k_conv, linestyle='-', marker="o", markersize = 3)
+  box = ax3.get_position()
+  ax3.set_position([box.x0,box.y0, box.width * 0.8, box.height])
+  #lgd3 = ax3.legend(loc ='center left', bbox_to_anchor=(1, 0.5), ncol = 2)
+  ax3.set_ylabel('k off (s^-1)')
+  ax3.set_xlabel('time (ns)')
+
+  
+
+
+
+  plt.savefig('convergence.png', bbox_extra_artists=(lgd1,lgd2), bbox_inches='tight', format='png', dpi=300)
+  pickle.dump(fig, open('conv.fig.pickle', 'wb'))
+  plt.show()
+  return     
 
 
 def main():
@@ -865,20 +928,46 @@ def main():
   #print max_steps
   # starting kinetics analysis
   if milestone_conv == True:
-    conv_file = open('k_off_conv.txt', 'w')
+    k_conv_file = open('k_off_conv.txt', 'w')
     conv_intervals = np.arange(conv_stride, max_steps + conv_stride, conv_stride)
     #print conv_intervals
-    for interval in conv_intervals:
-      p_equil, N, R, T = analyze_kinetics(calc_type, model, bound_dict, doing_error=False, verbose=verbose, max_steps=interval, bd_time=bd_time, error_number=error_number, error_skip=error_skip)
-
+    N_conv = np.zeros((8,8,len(conv_intervals)))
+    R_conv = np.zeros((8,8,len(conv_intervals)))
+    k_conv = np.zeros(len(conv_intervals))
+    k_cell_conv = np.zeros((8,8,len(conv_intervals)))
+    p_equil_conv = np.zeros((8,len(conv_intervals)))
+    for interval_index in range(len(conv_intervals)):
+      p_equil, N, R, T, n_conv, r_conv, k_cell, p_equil = analyze_kinetics(calc_type, model, bound_dict, doing_error=False, verbose=verbose, max_steps=conv_intervals[interval_index], bd_time=bd_time, error_number=error_number, error_skip=error_skip)
+      
       MFPT = T[0]
       k_off = 1e15/MFPT
-      print interval, ",   ", k_off
-      conv_file.write(str(interval)+'\t'+(str(k_off))+'\n')
+      print conv_intervals[interval_index], ",   ", k_off
 
-    conv_file.close()
+      for index, x in np.ndenumerate(n_conv):
+          N_conv[index[0]][index[1]][interval_index]=x
+      for index2,y in np.ndenumerate(r_conv):
+        R_conv[index2[0]][index2[1]][interval_index]= y 
+      for index3,z in np.ndenumerate(k_cell):
+        k_cell_conv[index3[0]][index3[1]][interval_index]= z
+      for index4,j in np.ndenumerate(p_equil):
+        p_equil_conv[index4[0]][interval_index]= j   
+      k_conv[interval_index]=k_off    
+      
+      #k_conv_file.write(str(interval)+'\t'+(str(k_off))+'\n')
+
+      #print np.shape(n_conv)
+      #pprint(n_conv)
+      #print np.shape(r_conv)
+      #np.concatenate((N_conv, n_conv), )
+      #np.concatenate((R_conv, r_conv), )
+      #k_conv.append(k_off)
+    #k_conv_file.close()
+    #pprint(N_conv)
+    #pprint(R_conv)
+    print 'conv intervals' , np.multiply(conv_intervals,2e-6)
+    plot_conv(N_conv, R_conv, k_conv, conv_intervals, k_cell_conv, p_equil_conv)
   else:
-    p_equil, N, R, T = analyze_kinetics(calc_type, model, bound_dict, doing_error=False, verbose=verbose, bd_time=bd_time, error_number=error_number, error_skip=error_skip)
+    p_equil, N, R, T, n_conv, r_conv, k_cell, p_equil= analyze_kinetics(calc_type, model, bound_dict, doing_error=False, verbose=verbose, bd_time=bd_time, error_number=error_number, error_skip=error_skip)
 
     MFPT = T[0]
     k_off = 1e15/MFPT
