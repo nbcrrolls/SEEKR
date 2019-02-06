@@ -781,14 +781,14 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
 def plot_conv(N_conv, R_conv, k_conv, conv_intervals, k_cell_conv, p_equil_conv):
   fig= plt.figure()
   cm = plt.get_cmap('tab20')
-  ax = fig.add_subplot(3,1,1)
+  ax = fig.add_subplot(5,1,1,)
   NUM_COLORS=14
   ax.set_color_cycle([cm(1.*j/NUM_COLORS) for j in range(NUM_COLORS)])
   for i in range(N_conv.shape[0]):
     for j in range(N_conv.shape[1]):
         if np.sum(N_conv[i][j][:]) != 0:
           label_string = 'Src: '+str(i) +',' + 'Dest: '+str(j)
-          ax.plot(np.multiply(conv_intervals,2e-6), N_conv[i][j][:], label = label_string ,linestyle='-', marker="o", markersize = 3)
+          ax.plot(np.multiply(conv_intervals,2e-6), N_conv[i][j][:], label = label_string ,linestyle='-', marker="o", markersize = 1)
   ax.set_ylabel('N/T')
   ax.set_xlabel('time (ns)')
   #ax_settitle('Transition Count Convergence')
@@ -797,13 +797,13 @@ def plot_conv(N_conv, R_conv, k_conv, conv_intervals, k_cell_conv, p_equil_conv)
   lgd1 = ax.legend(loc ='center left', bbox_to_anchor=(1, 0.5), ncol = 2)  
   ax.grid(b=True,axis = 'y', which = 'both')
 
-  ax2 = fig.add_subplot(3,1,2)
+  ax2 = fig.add_subplot(5,1,2, sharex = ax)
   ax2.set_color_cycle([cm(1.*j/NUM_COLORS) for j in range(NUM_COLORS)])
   for i in range(R_conv.shape[0]):
     for j in range(R_conv.shape[1]):
       if np.sum(R_conv[i][j][:]) != 0:
         label_string_2 = 'anchor ' +str(i) + ',' + 'Milestone '+str(j)
-        ax2.plot(np.multiply(conv_intervals,2e-6), R_conv[i][j][:], label = label_string_2 ,linestyle='-', marker="o", markersize = 3)
+        ax2.plot(np.multiply(conv_intervals,2e-6), R_conv[i][j][:], label = label_string_2 ,linestyle='-', marker="o", markersize = 1)
   box = ax2.get_position()
   ax2.set_position([box.x0,box.y0, box.width * 0.8, box.height])
   lgd2 = ax2.legend(loc ='center left', bbox_to_anchor=(1, 0.5), ncol = 2)
@@ -813,10 +813,36 @@ def plot_conv(N_conv, R_conv, k_conv, conv_intervals, k_cell_conv, p_equil_conv)
   #ax2_settitle('Incubation Time Convergence')
 
 ## k_cell and p_equil conv plots go here
+ 
 
+  ax5 = fig.add_subplot(5,1,3, sharex = ax)
+  ax5.set_color_cycle([cm(1.*j/NUM_COLORS) for j in range(NUM_COLORS)])
+  for i in range(p_equil_conv.shape[0]):
+        label_string_2 = 'anchor ' +str(i) 
+        ax5.plot(np.multiply(conv_intervals,2e-6), p_equil_conv[i][:], label = label_string_2 ,linestyle='-', marker="o", markersize = 1)
+  box = ax5.get_position()
+  ax5.set_position([box.x0,box.y0, box.width * 0.8, box.height])
+  lgd2 = ax5.legend(loc ='center left', bbox_to_anchor=(1, 0.5), ncol = 2)
+  ax5.set_ylabel('p equil')
+  ax5.set_xlabel('time (ns)')
+  ax5.grid(b=True ,axis = 'y', which = 'both')
 
-  ax3 = fig.add_subplot(3,1,3)
-  ax3.plot(np.multiply(conv_intervals,2e-6), k_conv, linestyle='-', marker="o", markersize = 3)
+  ax4 = fig.add_subplot(5,1,4, sharex = ax)
+  ax4.set_color_cycle([cm(1.*j/NUM_COLORS) for j in range(NUM_COLORS)])
+  for i in range(k_cell_conv.shape[0]):
+    for j in range(k_cell_conv.shape[1]):
+      if np.sum(k_cell_conv[i][j][:]) != 0:
+        label_string_2 = 'anchor ' +str(i) + ',' + 'Milestone '+str(j)
+        ax4.plot(np.multiply(conv_intervals,2e-6), k_cell_conv[i][j][:], label = label_string_2 ,linestyle='-', marker="o", markersize = 1)
+  box = ax4.get_position()
+  ax4.set_position([box.x0,box.y0, box.width * 0.8, box.height])
+  lgd2 = ax4.legend(loc ='center left', bbox_to_anchor=(1, 0.5), ncol = 2)
+  ax4.set_ylabel('k cell')
+  ax4.set_xlabel('time (ns)')
+  ax4.grid(b=True ,axis = 'y', which = 'both')
+
+  ax3 = fig.add_subplot(5,1,5, sharex = ax)
+  ax3.plot(np.multiply(conv_intervals,2e-6), k_conv, linestyle='-', marker="o", markersize = 1)
   box = ax3.get_position()
   ax3.set_position([box.x0,box.y0, box.width * 0.8, box.height])
   #lgd3 = ax3.legend(loc ='center left', bbox_to_anchor=(1, 0.5), ncol = 2)
@@ -952,6 +978,9 @@ def main():
       for index4,j in np.ndenumerate(p_equil):
         p_equil_conv[index4[0]][interval_index]= j   
       k_conv[interval_index]=k_off    
+      
+
+      print p_equil_conv.shape
       
       #k_conv_file.write(str(interval)+'\t'+(str(k_off))+'\n')
 
