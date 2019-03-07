@@ -274,7 +274,7 @@ class Anchor():
           cell_counts[curr_cell][new_cell] = 1
       else:
         cell_counts[curr_cell] = {new_cell:1} 
-    total_time = collision.step + self.offsets[collision.replicate]
+    total_time = collision.step *md_time_factor + self.offsets[collision.replicate] * md_time_factor 
     #total_time = self.total_steps * md_time_factor
     #print 'vt_collisions total time',total_time
     return cell_counts, total_time
@@ -780,9 +780,10 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
 
   total_sim_time = 0
   for i in total_cell_times.keys():
+    print i, total_cell_times[i]/1e6, "ns"
     total_sim_time += total_cell_times[i]
 
-  #print "Total simulation time: " ,  total_sim_time/1e6, "ns" 
+  print "Total simulation time: " ,  total_sim_time/1e6, "ns" 
 
 
 
