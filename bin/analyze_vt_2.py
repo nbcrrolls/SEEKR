@@ -579,7 +579,7 @@ def read_transition_statistics_from_files(model, verbose):
   
   return total_steps 
 
-def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time, max_steps =None, error_number = 1, error_skip = 1, milestone_conv='False' ,  conv_stride=50, rand_conv= 'False', rand_samples=10, plt_name= ''):
+def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time, md_time_factor = DEFAULT_MD_TIME_FACTOR, max_steps =None, error_number = 1, error_skip = 1, milestone_conv='False' ,  conv_stride=50, rand_conv= 'False', rand_samples=10, plt_name= ''):
   '''main function to perform all kinetics analyses.
   Given a Model() object with its statistics filled out, it will return an estimate of the kinetic
   value, given all or a subset of its statistics.
@@ -720,10 +720,11 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
         #print counts[anchor][src][dest]
         #print total_cell_times[int(anchor)]
         N[src][dest] = p_equil[int(anchor)] * float(counts[anchor][src][dest])/ total_cell_times[int(anchor)]
-        if total_cell_times[int(anchor)] >= max_steps: 
-          N_conv[src][dest] = float(counts[anchor][src][dest])/ total_cell_times[int(anchor)]
-        else:
-         N_conv[src][dest] = np.nan      
+        if max_steps != None: 
+          if  total_cell_times[int(anchor)] >= max_steps * md_time_factor: 
+            N_conv[src][dest] = float(counts[anchor][src][dest])/ total_cell_times[int(anchor)]
+          else:
+            N_conv[src][dest] = np.nan      
 
   if verbose: print "N:", N
 
@@ -732,10 +733,11 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
   for anchor in times.keys():
     for src in times[anchor].keys(): 
       R[src] += (p_equil[int(anchor)] * times[anchor][src]/ total_cell_times[int(anchor)])
-      if total_cell_times[int(anchor)] >= max_steps:
-        R_conv[int(anchor)][src] = times[anchor][src]/ total_cell_times[int(anchor)] 
-      else:
-        R_conv[int(anchor)][src] = np.nan
+      if max_steps != None:
+        if total_cell_times[int(anchor)] >= max_steps* md_time_factor:
+          R_conv[int(anchor)][src] = times[anchor][src]/ total_cell_times[int(anchor)] 
+        else:
+          R_conv[int(anchor)][src] = np.nan
 
   if verbose: print "R:", R
 
@@ -796,7 +798,7 @@ def plot_conv(N_conv, R_conv, k_conv, conv_intervals, k_cell_conv, p_equil_conv)
   fig= plt.figure()
   cm = plt.get_cmap('tab20')
   ax = fig.add_subplot(5,1,1,)
-  NUM_COLORS=14
+  NUM_COLORS=20
   ax.set_color_cycle([cm(1.*j/NUM_COLORS) for j in range(NUM_COLORS)])
   for i in range(N_conv.shape[0]):
     for j in range(N_conv.shape[1]):
@@ -969,17 +971,18 @@ def main():
   # starting kinetics analysis
   if milestone_conv == True:
     k_conv_file = open('k_off_conv.txt', 'w')
-    conv_intervals = np.arange(conv_stride, max_steps + conv_stride, conv_stride)
+    conv_intervals = np.arange(conv_stride, max_steps, conv_stride)
     print conv_intervals
     print max_steps
-    N_conv = np.zeros((9,9,len(conv_intervals)))
-    R_conv = np.zeros((9,9,len(conv_intervals)))
+    N_conv = np.zeros((15,15,len(conv_intervals)))
+    R_conv = np.zeros((15,15,len(conv_intervals)))
     k_conv = np.zeros(len(conv_intervals))
-    k_cell_conv = np.zeros((9,9,len(conv_intervals)))
-    p_equil_conv = np.zeros((9,len(conv_intervals)))
+    k_cell_conv = np.zeros((15,15,len(conv_intervals)))
+    p_equil_conv = np.zeros((15,len(conv_intervals)))
     for interval_index in range(len(conv_intervals)):
       p_equil, N, R, T, n_conv, r_conv, k_cell, p_equil = analyze_kinetics(calc_type, model, bound_dict, doing_error=False, verbose=verbose, max_steps=conv_intervals[interval_index], bd_time=bd_time, error_number=error_number, error_skip=error_skip)
-      
+     
+      print n_conv 
       MFPT = T[0]
       k_off = 1e15/MFPT
       #print conv_intervals[interval_index], ",   ", k_off
@@ -1008,7 +1011,12 @@ def main():
     #k_conv_file.close()
     #pprint(N_conv)
     #pprint(R_conv)
+    MFPT = T[0]
+    k_off = 1e15/MFPT
+    print "k_off: " , k_off, "s^-1"
+
     print 'conv intervals' , np.multiply(conv_intervals,2e-6)
+    #print N_conv
     plot_conv(N_conv, R_conv, k_conv, conv_intervals, k_cell_conv, p_equil_conv)
   else:
     p_equil, N, R, T, n_conv, r_conv, k_cell, p_equil= analyze_kinetics(calc_type, model, bound_dict, doing_error=False, verbose=verbose, bd_time=bd_time, error_number=error_number, error_skip=error_skip)
