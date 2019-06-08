@@ -127,14 +127,11 @@ class Anchor():
     #print forward_dir_glob
     forward_output_filenames = sorted(glob.glob(forward_dir_glob))
     # read files and sift out the transition lines
-    #transition_lines = [] # a list of transitions by milestone for easy rearrangement later for convergence analysis
-    #vt_collisions = []
     unsorted_transitions = []
     unsorted_collisions = []
     replicate = 1
     self.offsets[replicate] = 0
     #print 'current max step' , info['max_steps']
-    #sorted(forward_output_filenames)
     for filename in forward_output_filenames:
       transition_lines = []
       vt_collisions = []
@@ -152,37 +149,22 @@ class Anchor():
            # print line
       #pprint(transition_lines)
     # feed the lines into the Transition object
-      #unsorted_transitions = []
       for line in transition_lines:
         transition = Transition(line)
         transition.replicate = replicate
-        #print transition.replicate, transition.cur_step
         unsorted_transitions.append(transition)
-        #if transition.cur_step > info['max_steps']:
-        #  info['max_steps'] = transition.cur_step
-          # file_max_steps = transition.cur_step
-       
-      #if transition.velocity_step > info['max_velocity_steps']:
-      #  info['max_velocity_steps']= transition.velocity_step
-      #unsorted_collisions = []
+
       for line in vt_collisions:
         collision = Collision(line)
         collision.replicate = replicate
         unsorted_collisions.append(collision)
       file_max_steps = collision.step
       
-      #print "steps: " , file_max_steps  
-      
-    # now sort the lines by ID and VEL_ID
-    #sorted_transitions = sorted(unsorted_transitions, key=attrgetter('umbrella_step', 'velocity_step')) # sort transitions by umbrella_step, then velocity_step
-   
       self.total_steps += file_max_steps
       self.offsets[replicate+1] = self.offsets[replicate]+file_max_steps 
       replicate += 1
-    #print "total steps for anchor:" , self.total_steps  
     self.transitions = unsorted_transitions
     self.collisions = unsorted_collisions
-    #info['max_steps'] = self.total_steps
     print 'anchor', self.index, self.offsets
     return self.total_steps
 
@@ -197,7 +179,6 @@ class Anchor():
     site_index = self.site
     site_name = self.sitename
    
-    #print "offsets", self.site, self.offsets 
     for transition in self.transitions:
  
       source = transition.src
@@ -205,20 +186,11 @@ class Anchor():
       time = transition.time
       anchor = transition.anchor
       stepnum = transition.cur_step
- 
-       
       src_key = source
       dest_key = dest
-      #src_key = '%s_%d' % (site_name, source)
-      #dest_key = '%s_%d' % (site_name, dest)
-      #print 'max_step', max_step
-      #print transition.cur_step
-      #print 'step + offset', transition.replicate, int(stepnum + self.offsets[transition.replicate])
 
       if max_step != None and int(stepnum + self.offsets[transition.replicate]) > max_step:
         break
-        #continue
-      #print self.index, src_key, dest_key
       if self.index in counts.keys():
         if src_key in counts[self.index].keys():
           if dest_key in counts[self.index][src_key].keys():
@@ -226,7 +198,6 @@ class Anchor():
           else:
             counts[self.index][src_key][dest_key] = 1
           total_times[self.index][src_key] += time * md_time_factor
-     #     cell_times[curr_cell] += time * md_time_factor
           total_counts[src_key] += 1
         else:
           counts[self.index][src_key] = {dest_key:1}
@@ -236,26 +207,7 @@ class Anchor():
         counts[self.index]= {src_key: {dest_key: 1}}
         total_times[self.index] = {src_key : (time * md_time_factor)}
         total_counts[src_key] =1
-  
-        #print counts
-        #print total_times
-      #    cell_times[curr_cell] = time * md_time_factor
-  
-      # if curr_cell != new_cell:  #skips transitions to the bound state milestone, as there is not a v_cell there
-      #    if curr_cell in cell_counts.keys():
-      #      if new_cell in cell_counts[curr_cell].keys():
-      #        cell_counts[curr_cell][new_cell] += 1
-      #      else:
-      #        print "new trans obs"
-      #        cell_counts[curr_cell][new_cell] = 1
-      #    else:
-      #      cell_counts[curr_cell] = {new_cell:1}
-          
-  
-     # for src_key in total_times.keys():
-     #   avg_times[src_key] = total_times[src_key] / total_counts[src_key]
-  
-      #print cell_counts
+
     return counts, total_counts, total_times, avg_times
 
   def get_md_vt_collisions(self, md_time_factor=DEFAULT_MD_TIME_FACTOR, max_step=None,):
@@ -275,13 +227,8 @@ class Anchor():
       else:
         cell_counts[curr_cell] = {new_cell:1} 
     total_time = collision.step *md_time_factor + self.offsets[collision.replicate] * md_time_factor 
-    #total_time = self.total_steps * md_time_factor
-    #print 'vt_collisions total time',total_time
+
     return cell_counts, total_time
-    
-    
-
-
 
 class Milestone():
   ''' object representing a single milestone '''
@@ -299,74 +246,6 @@ class Milestone():
     #self.site = siteindex
     #self.sitename = sitename
     self.transitions = [] # all the transition statistics associated with this milestone
-
-#  def parse_md_transitions(self, info):
-#    'find all forward phase simulation output files'
-#    forward_dir_glob = os.path.join(self.directory,'md','fwd_rev',FORWARD_OUTPUT_GLOB)
-#    #print forward_dir_glob
-#    forward_output_filenames = glob.glob(forward_dir_glob)
-#    # read files and sift out the transition lines
-#    transition_lines = [] # a list of transitions by milestone for easy rearrangement later for convergence analysis
-#    for filename in forward_output_filenames:
-#     # print 'output filename', filename
-#      for line in open(filename,'r'):
-#        if re.match(GRID_TRANSITION_COMPILE, line):
-#          transition_lines.append(line)
-#      #pprint(transition_lines)
-#    # feed the lines into the Transition object
-#    unsorted_transitions = []
-#    for line in transition_lines:
-#      transition = Transition(line)
-#      unsorted_transitions.append(transition)
-#      #if transition.umbrella_step > info['max_umbrella_steps']:
-#      #  info['max_umbrella_steps'] = transition.umbrella_step
-#      #if transition.velocity_step > info['max_velocity_steps']:
-#      #  info['max_velocity_steps']= transition.velocity_step
-#
-#    # now sort the lines by ID and VEL_ID
-#    #sorted_transitions = sorted(unsorted_transitions, key=attrgetter('umbrella_step', 'velocity_step')) # sort transitions by umbrella_step, then velocity_step
-#    self.transitions = unsorted_transitions
-#    return info
-
-#  def get_md_transition_statistics(self, md_time_factor=DEFAULT_MD_TIME_FACTOR, max_umbrella_step=None, rand_conv=False, rand_size=10):
-#    'parse the transition data to obtain transition counts'
-#    counts = {} # all the sources and their destinations
-#    total_counts = {} # keeps track of all counts to any destination
-#    total_times = {} # the total time of all counts, to be averaged later
-#    avg_times = {} # the times to transition out of each source
-#    site_index = self.site
-#    site_name = self.sitename
-#
-#    for transition in self.transitions:
-#
-#      source = transition.src
-#      dest = transition.dest
-#      time = transition.time
-#      umbrella_step = transition.umbrella_step
-#      if max_umbrella_step != None and umbrella_step > max_umbrella_step: # for convergence analysis, we may only want to sample a subset of umbrella steps
-#        break
-#      #src_key = '%d_%d' % (site_index, source)
-#      src_key = '%s_%d' % (site_name, source)
-#      #dest_key = '%d_%d' % (site_index, dest)
-#      dest_key = '%s_%d' % (site_name, dest)
-#      if src_key in counts.keys():
-#        if dest_key in counts[src_key].keys():
-#          counts[src_key][dest_key] += 1
-#        else:
-#          counts[src_key][dest_key] = 1
-#        total_times[src_key] += time * md_time_factor
-#        total_counts[src_key] += 1
-#      else:
-#        counts[src_key] = {dest_key:1}
-#        total_counts[src_key] = 1
-#        total_times[src_key] = time * md_time_factor
-#
-#
-#    for src_key in total_times.keys():
-#      avg_times[src_key] = total_times[src_key] / total_counts[src_key]
-#
-#    return counts, total_counts, total_times, avg_times
-
 
 class Collision():
   '''Object representing all collisiont with a voronoi cell edge'''
@@ -584,7 +463,7 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
   Given a Model() object with its statistics filled out, it will return an estimate of the kinetic
   value, given all or a subset of its statistics.
   '''
-  counts = {}; times = {}; total_counts = {}; total_cell_counts = {}; total_times = {}; avg_times = {}; trans = {}; total_cell_times = {}
+  counts = {}; times = {}; total_counts = {}; total_cell_counts = {}; total_times = {}; avg_times = {}; trans = {}; total_cell_times = {}; T_a = {}
   end_indeces = [];
   N = {}
   if verbose: print 'max_steps', max_steps 
@@ -661,7 +540,7 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
         #print total_cell_times[cell]
         k_cell[cell][new_cell] = (float(total_cell_counts[cell][new_cell])/float(total_cell_times[cell]))
         #print k_cell[cell][new_cell]
-
+     
   #print "k_cell"; pprint(k_cell)
  
 ## Create the steady state flux matrix##
@@ -711,6 +590,12 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
   if verbose: print "counts: ", counts
   if verbose: print "times: ", times
 
+  T_a = np.zeros(len(p_equil))
+  for cell in total_cell_times:
+  	T_a[cell] = p_equil[cell]/total_cell_times[cell]
+  T_tot = 1/np.sum(T_a)
+
+
   N = np.zeros((len(p_equil)+1,len(p_equil)+1))
   N_conv = np.zeros((len(p_equil)+1,len(p_equil)+1))
   for anchor in counts.keys():
@@ -755,29 +640,14 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
 
   if verbose: print ""
   if verbose: print Q
+  print "TEST", N[2,3]
 
 # Calculate MFPT and off rate
-  Q_hat = Q[:-1,:-1]
-
-  if verbose: print Q_hat
-
-  #print np.shape(Q)
-  #print np.shape(Q_hat)
-
-  I = np.zeros(len(Q_hat[0]))
-  #I[:] = np.sqrt(len(Q_hat[0]))
-  I[:] = 1
   
-  #print I
-  T= np.linalg.solve(Q_hat,-I)
+  T= calc_MFPT_vec(Q)
 
-  #print T
-
-  MFPT = T[0]
-  if verbose: print "MFPT =", T, "fs"
-
-  k_off = 1e15/MFPT
- 
+  #MFPT = T[0]
+  #k_off = 1e15/MFPT
   #print "k_off = ", k_off, "s-1" 
 
   total_sim_time = 0
@@ -787,11 +657,98 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
 
   print "Total simulation time: " ,  total_sim_time/1e6, "ns" 
 
+  return p_equil, N, R, T, T_tot, Q, N_conv, R_conv, k_cell, 
+
+def calc_MFPT_vec(Q):
+  Q_hat = Q[:-1,:-1]
+
+  #if verbose: print Q_hat
+
+  I = np.zeros(len(Q_hat[0]))
+  #I[:] = np.sqrt(len(Q_hat[0]))
+  I[:] = 1
+  
+  T= np.linalg.solve(Q_hat,-I)
+
+  #MFPT = T[0]
+  #if verbose: print "MFPT =", T, "fs"
+
+  #k_off = 1e15/MFPT  
+
+  return T
+
+def monte_carlo_milestoning_error(Q0, N, R, p_equil, T_tot, num = 1000, skip = 0):
+  '''Samples distribution of rate matrices assumming a poisson (gamma) distribution with parameters Nij and Ri using Markov chain Monte Carlo
+    Enforces detailed Balance-- using a modified version of Algorithm 4 form Noe 2008 for rate matrices.--  
+	Distribution is:  p(Q|N) = p(Q)p(N|Q)/p(N) = p(Q) PI(q_ij**N_ij * exp(-q_ij * Ri))
+  '''
+  m = N.shape[0] #get size of count matrix
+  Q = Q0
+  Q_mats = []
+
+  print "Q", Q.shape
+  print Q
+
+  print "p_equil"
+  print p_equil
+
+  foo = np.array([[1,2], [3,4]])
+  print foo
+  print foo[1,1]
+
+  for counter in range(num*(skip+1)):
+    r = random.random() #genarate uniform random number for acceptance probability
+    i = random.randint(0,m-1)
+    j = random.randint(0,m-1)
+    print "r" , r, "i", i, "j", j 
+    print "N", N.shape, N
+    print "R", R.shape, R
 
 
- 
 
-  return p_equil, N, R, T, N_conv, R_conv, k_cell, p_equil 
+    print min(Q[i,i], Q[j,j], (p_equil[j]/p_equil[i])*Q[i,j], (p_equil[j]/p_equil[i])*Q[j,i] )
+
+    delta = random.uniform(0, abs(min(Q[i,i], Q[j,j], (p_equil[j]/p_equil[i])*Q[i,j], (p_equil[j]/p_equil[i])*Q[j,i] ))) #generate uniform random variable bounded to ensure no q_ij changes sign 
+    print "delta", delta
+
+    if Q[i][j] == 0.0: 
+      print "skip"
+      continue
+    if i == j: 
+      print "skip"
+      continue
+
+
+
+    print "N_ij", N[i,j]* T_tot
+    print "R_ij" , R[i] * T_tot
+    #delta = random.gammavariate(N[i,j]* T_tot, R[i] * T_tot) - Q[i,j]  # Select from a Poisson distribution (gamma) and ensure that delta has a minimum value of changing Q[i,j] down only to zero --- FIX THIS FOR EQUIL PROB?
+    
+
+
+      
+
+    Qnew = Q
+    #Perform Row Shift operation (detailed balance, fixed equil prob)
+
+    #if np.isinf(delta): continue #skips random numbers of infinity
+
+    #Calculate acceptance probability for Metropolis-Hastings -- using log-likliehood 
+    p_acc = (N[i,i] * log(Q[i,i] + delta) - N[i,i] * log(Q[i,i]) + N[i,j] * log(N[i,j] - delta) - N[i,j] * log(Q[i,j]) +  N[j,j] * log(Q[j,j] + (p_equil[i]/p_equil[j]) *delta) - N[j,j] * log(Q[j,j]) + N[j,i] * log(Q[j,i] - (p_equil[i]/p_equil[j]) *delta) - N[j,i] * log(Q[j,i])) 
+
+    print "p_acc", p_acc
+    if r < p_acc:
+      Qnew[i,i] = Qnew[i,i] + delta
+      Qnew[j,j] = Qnew[j,j] + (delta * (p_equil[i]/p_equil[j]))
+      Qnew[i,j] = Qnew[i,j] - delta
+      Qnew[j,i] = Qnew[j,i] - (delta * (p_equil[i]/p_equil[j]))
+
+    if counter % (skip +1) == 0:
+      Q_mats.append(Qnew)
+    Q = Qnew
+  return Q_mats
+
+
 
 
 def plot_conv(N_conv, R_conv, k_conv, conv_intervals, k_cell_conv, p_equil_conv):
@@ -889,6 +846,7 @@ def main():
   parser.add_argument('--nobd', dest="nobd", help="Do not include the BD statistics in the calculation")
   parser.add_argument('--nomd', dest="nomd", help="Do not include the MD statistics in the calculation")
   parser.add_argument('--test', dest="test", help="Run the unittests", action="store_true")
+  parser.add_argument('--doing_error', dest="doing_error", default =True, help= "whether MCMC error estimate should be performed")
   parser.add_argument('--skip', dest='error_skip', type=int, default=1, help="define how many matrix samples to skip when doing MC error estimation" )
   parser.add_argument('--number', dest='error_number', type=int, default=1000, help="define how many matrices to sample for MC error estimation" )
   parser.add_argument('-v','--verbose', dest="verbose", help="verbose output", action="store_true")
@@ -904,6 +862,7 @@ def main():
   args = vars(args) # convert to a dictionary
   #print "args:", args
   milestone_filename = args['milestones'] # parse the milestoning XML file
+  doing_error = args['doing_error']
   verbose = False
   info_mode = False
   if args['verbose']:
@@ -969,6 +928,29 @@ def main():
   #print milestone_conv
   #print max_steps
   # starting kinetics analysis
+  if calc_type == "off":
+    p_equil, N, R, T, T_tot, Q, n_conv, r_conv, k_cell= analyze_kinetics(calc_type, model, bound_dict, doing_error=True, verbose=verbose, bd_time=bd_time, error_number=error_number, error_skip=error_skip)
+
+    
+
+    if doing_error == True:
+    	Q_mats = monte_carlo_milestoning_error(Q, N, R, p_equil,T_tot, num = error_number, skip = error_skip)
+    	for Q in Q_mats:
+    		T = calc_MFPT_vec
+    		mfpt_list.append(T[0])
+    		k_off_list.append(1e15/T[0])
+
+        mfpt_std = np.std(mfpt_list)
+        k_off_std = np.std(k_off_list)
+
+    MFPT = T[0]
+    k_off = 1e15/MFPT
+    if doing_error == True:
+      print "k_off: " , k_off," +- ", k_off_std, " s^-1" 
+    else:
+    	print "k_off: " , k_off, " s^-1" 
+
+
   if milestone_conv == True:
     k_conv_file = open('k_off_conv.txt', 'w')
     conv_intervals = np.arange(conv_stride, max_steps, conv_stride)
@@ -980,7 +962,7 @@ def main():
     k_cell_conv = np.zeros((15,15,len(conv_intervals)))
     p_equil_conv = np.zeros((15,len(conv_intervals)))
     for interval_index in range(len(conv_intervals)):
-      p_equil, N, R, T, n_conv, r_conv, k_cell, p_equil = analyze_kinetics(calc_type, model, bound_dict, doing_error=False, verbose=verbose, max_steps=conv_intervals[interval_index], bd_time=bd_time, error_number=error_number, error_skip=error_skip)
+      p_equil, N, R, T, T_tot, Q, n_conv, r_conv, k_cell = analyze_kinetics(calc_type, model, bound_dict, doing_error=False, verbose=verbose, max_steps=conv_intervals[interval_index], bd_time=bd_time, error_number=error_number, error_skip=error_skip)
      
       print n_conv 
       MFPT = T[0]
@@ -1018,13 +1000,13 @@ def main():
     print 'conv intervals' , np.multiply(conv_intervals,2e-6)
     #print N_conv
     plot_conv(N_conv, R_conv, k_conv, conv_intervals, k_cell_conv, p_equil_conv)
-  else:
-    p_equil, N, R, T, n_conv, r_conv, k_cell, p_equil= analyze_kinetics(calc_type, model, bound_dict, doing_error=False, verbose=verbose, bd_time=bd_time, error_number=error_number, error_skip=error_skip)
+  #else:
+  #  p_equil, N, R, T, n_conv, r_conv, k_cell, p_equil= analyze_kinetics(calc_type, model, bound_dict, doing_error=False, verbose=verbose, bd_time=bd_time, error_number=error_number, error_skip=error_skip)
 
-    MFPT = T[0]
-    k_off = 1e15/MFPT
-    print "k_off: " , k_off, "s^-1"
-   # print max_steps, ",   ", k_off
+   #  MFPT = T[0]
+   #  k_off = 1e15/MFPT
+   #  print "k_off: " , k_off, "s^-1"
+   # # print max_steps, ",   ", k_off
 
 
 if __name__ == "__main__": main()
