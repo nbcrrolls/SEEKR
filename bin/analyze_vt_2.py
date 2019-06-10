@@ -557,7 +557,7 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
   k_mod[-1][:] = 1
   #print "k_mod"; pprint(k_mod)
 
-  p_0= np.zeros((len(total_cell_times)), dtype="float")
+  p_0= np.zeros((len(total_cell_times)), dtype="float")  
   p_0[-1] = 1.0
 
   #pprint(p_0)
@@ -565,6 +565,8 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
   #print "k_cell:", np.shape(k_cell)
   #print "p_0:", np.shape(p_0)
   #k_cell_trans = np.transpose(k_cell)
+
+
 
 
 ## Calculate the equilibrium probabilities for each voronoi cell
@@ -640,7 +642,6 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
 
   if verbose: print ""
   if verbose: print Q
-  print "TEST", N[2,3]
 
 # Calculate MFPT and off rate
   
@@ -693,10 +694,24 @@ def monte_carlo_milestoning_error(Q0, N, R, p_equil, T_tot, num = 1000, skip = 0
   #print p_equil
 
   ## calculate initial equilibrium flux by solving: pi = pi Q0  -- left eigenvector of Q0
-  lam, vec = la.eig(Q, left=True, right=False)
-  idx = np.argmin(np.abs(lam - 1))
-  pi = np.real(vec[:, idx])
-  pi/pi.sum()
+  # lam, vec = la.eig(Q, left=True, right=False)
+  # idx = np.argmin(np.abs(lam - 1))
+  # pi = np.real(vec[:, idx])
+  # pi/pi.sum()
+
+  zeros = np.zeros(m)
+  zeros[0] = 1.0
+  Q_mod = np.zeros((m,m))
+  for i in range(m):
+  	for j in range(m):
+  		Q_mod[i,j] = Q[i,j]
+  Q_mod[0][:] = 1  #sub redundant equation with normalization condition
+  print Q_mod.shape, Q_mod
+  print zeros.shape, zeros
+  print Q
+
+
+  pi= np.linalg.solve(Q_mod,zeros)
 
   print "pi", pi
 
