@@ -4,7 +4,7 @@ from string import Template
 from math import exp, log
 from pprint import pprint
 import numpy as np
-from scipy import linalg
+from scipy import linalg as la
 from copy import deepcopy
 import xml.etree.ElementTree as ET
 from subprocess import check_output
@@ -689,59 +689,83 @@ def monte_carlo_milestoning_error(Q0, N, R, p_equil, T_tot, num = 1000, skip = 0
   print "Q", Q.shape
   print Q
 
-  print "p_equil"
-  print p_equil
+  #print "p_equil"
+  #print p_equil
 
-  foo = np.array([[1,2], [3,4]])
-  print foo
-  print foo[1,1]
+  ## calculate initial equilibrium flux by solving: pi = pi Q0  -- left eigenvector of Q0
+  lam, vec = la.eig(Q, left=True, right=False)
+  idx = np.argmin(np.abs(lam - 1))
+  pi = np.real(vec[:, idx])
+  pi/pi.sum()
+
+  print "pi", pi
+
+  print "foo"
 
   for counter in range(num*(skip+1)):
-    r = random.random() #genarate uniform random number for acceptance probability
-    i = random.randint(0,m-1)
-    j = random.randint(0,m-1)
-    print "r" , r, "i", i, "j", j 
-    print "N", N.shape, N
-    print "R", R.shape, R
+
+    ##Generate random variables for step
+    r1 = random.random() #genarate uniform random number for do reversible element shift
+    r2 = random.random() #genarate uniform random number for acceptance probability
+    Qnew = Q
+
+    if r1 < 0.5:  #then do reversible element shift
+      i = random.randint(0,m-1)
+      j = random.randint(0,m-1)
+      print "r" , r2, "i", i, "j", j 
+      print "N", N.shape, N
+      print "R", R.shape, R
+      print "Q new", Qnew
 
 
-
-    print min(Q[i,i], Q[j,j], (p_equil[j]/p_equil[i])*Q[i,j], (p_equil[j]/p_equil[i])*Q[j,i] )
-
-    delta = random.uniform(0, abs(min(Q[i,i], Q[j,j], (p_equil[j]/p_equil[i])*Q[i,j], (p_equil[j]/p_equil[i])*Q[j,i] ))) #generate uniform random variable bounded to ensure no q_ij changes sign 
-    print "delta", delta
-
-    if Q[i][j] == 0.0: 
-      print "skip"
-      continue
-    if i == j: 
-      print "skip"
-      continue
+      if Qnew[i][j] == 0.0: 
+        print "skip"
+        continue
+      if i == j: 
+        print "skip"
+        continue
+      
+      ## Generate random perturbation, delta, bounded to prevent any Q from changing sign
+      delta = random.uniform(max(-abs(Qnew[i,i]), -abs(pi[j]/pi[i] * Qnew[j,])), abs(Qnew[j,i]))
+      print "delta", delta
 
 
+      #Calculate acceptance probability for reversible element shift
+      p_acc = sqrt((Qnew[i,j] - delta)**2 + (Qnew[j,j] - (pi[i]/pi[j]) * delta)**2 /(Qnew[i,j]**2 +Qnew[j,i]**2)) * ((Qnew[i,j] - delta)/Qnew[i,j])**N[i,j] * ((Qnew[j,i] - (pi[i]/pi[j]) * delta) / Qnew[j,i])**N[j,i] * ((Qnew[i,i] + delta) / Qnew[i,i])**N[i,i] * ((Qnew[j,j] + (pi[i]/pi[j]) * delta) / Qnew[j,j])**N[j,j]
+      print "p_acc", p_acc
+      
+      if r2 <= p_acc:
+        
 
-    print "N_ij", N[i,j]* T_tot
-    print "R_ij" , R[i] * T_tot
-    #delta = random.gammavariate(N[i,j]* T_tot, R[i] * T_tot) - Q[i,j]  # Select from a Poisson distribution (gamma) and ensure that delta has a minimum value of changing Q[i,j] down only to zero --- FIX THIS FOR EQUIL PROB?
+        Qnew[i,i] = -(abs(Qnew[i,i]) + delta)
+        Qnew[j,j] = -(abs(Qnew[j,j]) + (pi[i] / pi[j] * delta))
+        Qnew[i,j] = abs(Qnew[i,j]) - delta
+        Qnew[j,i] = abs(Qnew[j,i]) - (pi[i] / pi[j] * delta)
+
+      else: # do row shift
+        #generate random variables
+        i = random.randint(0,m-1)
+        alpha = random.randint(0,(1/(1-Q[ii])))
+
+        p_acc = aplha ** (m - 2 + np.sum(N[i]) - N[i,i]) * ((1- alpha(1-Qnew[i,i]))/Qnew[i,i]) ** N[i,i]
     
 
+        print "p_acc 2", p_acc
 
-      
+        if r2 <= p_acc:
+          for j in range(0,m-1):
+            Qnew[i,j] = alpha * Qnew[i,j]
+          Qnew[i,i] = 0
+          Qnew[i,i] = 1- np.sum(Qnew[i])
 
-    Qnew = Q
-    #Perform Row Shift operation (detailed balance, fixed equil prob)
+          ## Update stationary distribution
 
-    #if np.isinf(delta): continue #skips random numbers of infinity
+          for j in range(0,m-1):
+            pi[j] = alpha * pi[j] /pi[i] + aplha(1-pi[i])
 
-    #Calculate acceptance probability for Metropolis-Hastings -- using log-likliehood 
-    p_acc = (N[i,i] * log(Q[i,i] + delta) - N[i,i] * log(Q[i,i]) + N[i,j] * log(N[i,j] - delta) - N[i,j] * log(Q[i,j]) +  N[j,j] * log(Q[j,j] + (p_equil[i]/p_equil[j]) *delta) - N[j,j] * log(Q[j,j]) + N[j,i] * log(Q[j,i] - (p_equil[i]/p_equil[j]) *delta) - N[j,i] * log(Q[j,i])) 
+          pi[i] = 0
+          pi[i] = 1- np.sum(pi)
 
-    print "p_acc", p_acc
-    if r < p_acc:
-      Qnew[i,i] = Qnew[i,i] + delta
-      Qnew[j,j] = Qnew[j,j] + (delta * (p_equil[i]/p_equil[j]))
-      Qnew[i,j] = Qnew[i,j] - delta
-      Qnew[j,i] = Qnew[j,i] - (delta * (p_equil[i]/p_equil[j]))
 
     if counter % (skip +1) == 0:
       Q_mats.append(Qnew)
