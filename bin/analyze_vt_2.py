@@ -881,7 +881,62 @@ def monte_carlo_milestoning_error(Q0, N, R, p_equil, T_tot, num = 1000, skip = 0
   return Q_mats
 
 
+def monte_carlo_milestoning_nonreversible_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 20, skip = 0):
+  ''' Samples a distribution of rate matrices that are nonreversible
+      using Markov Chain Monte Carlo method
 
+      The distribution being sampled is:
+      p(Q|N) = p(Q)p(N|Q)/p(N) = p(Q) PI(q_ij**N_ij * exp(-q_ij * R_ij))
+
+      N = count matrix
+      R = transition times
+
+  '''
+  #Q0, N_sum = count_mat_to_rate_mat(N, avg_t) # get a rate matrix and a sum of counts vector
+  m = Q0.shape[0] # the size of the matrix
+  Q = Q0
+  Q_mats = []
+  N = []
+  R = []
+  
+  N = T_tot * N_pre
+  R = T_tot * R_pre 
+
+
+  for counter in range(num*(skip+1)):
+    Qnew =  np.zeros((m,m)) #np.matrix(np.copy(T))
+    for i in range(m): # rows
+      for j in range(m): # columns
+        Qnew[i,j] = Q[i,j]
+
+    for i in range(m): # rows
+      for j in range(m): # columns
+        if i == j: continue
+        if Qnew[i,j] == 0.0: continue
+        if Qnew[j,j] == 0.0: continue
+        delta = random.expovariate(1.0/(Qnew[i,j])) - Qnew[i,j] # so that it's averaged at zero change, but has a minimum value of changing Q[j,j] down only to zero
+
+        if np.isinf(delta): continue
+        r = random.random()
+
+        # NOTE: all this math is being done in logarithmic form first (log-likelihood)
+        new_ij = N[i,j] * log(Qnew[i,j] + delta) - ((Qnew[i,j] + delta) * R[i])
+        old_ij = N[i,j] * log(Qnew[i,j]) - ((Qnew[i,j]) * R[i])
+        p_acc = (new_ij - old_ij) # + (new_jj - old_jj)
+        #print log(r), p_acc
+        if log(r) <= p_acc: # this can be directly compared to the log of the random variable
+          #print "accepted"
+          Qnew[i,i] = Qnew[i,i] - delta
+          Qnew[i,j] = Qnew[i,j] + delta
+        #else:
+          #print "reject"
+
+
+    #print Qnew 
+    if counter % (skip+1) == 0: # then save this result for later analysis
+      Q_mats.append(Qnew)
+    Q = Qnew
+  return Q_mats
 
 def plot_conv(N_conv, R_conv, k_conv, conv_intervals, k_cell_conv, p_equil_conv):
   fig= plt.figure()
@@ -1068,18 +1123,20 @@ def main():
     if doing_error == True:
       mfpt_list = []
       k_off_list = []
-      Q_mats = monte_carlo_milestoning_error(Q, N, R, p_equil,T_tot, num = error_number, skip = error_skip)
+      #Q_mats = monte_carlo_milestoning_error(Q, N, R, p_equil,T_tot, num = error_number, skip = error_skip)
+      Q_mats = monte_carlo_milestoning_nonreversible_error(Q, N, R, p_equil, T_tot, num = error_number, skip = error_skip)
+      #print Q_mats
       for Q_err in Q_mats:
         T_err = calc_MFPT_vec(Q_err)
-        #print "T", T
+        #print "T", T_err
         mfpt_list.append(T_err[0])
-        k_off_list.append(1e15/T[0])
-        mfpt_std = np.std(mfpt_list)
-        k_off_std = np.std(k_off_list)
+        k_off_list.append(1e15/T_err[0])
+      mfpt_std = np.std(mfpt_list)
+      k_off_std = np.std(k_off_list)
 
     MFPT = T[0]
     k_off = 1e15/MFPT
-    print len(k_off_list)
+    #print k_off_list
     print "avg k off", np.average(k_off_list)
     if doing_error == True:
       print "k_off: " , k_off," +- ", k_off_std, " s^-1" 
