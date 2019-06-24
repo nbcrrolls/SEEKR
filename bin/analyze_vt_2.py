@@ -913,7 +913,7 @@ def monte_carlo_milestoning_nonreversible_error(Q0, N_pre, R_pre, p_equil, T_tot
       for j in range(m): # columns
         if i == j: continue
         if Qnew[i,j] == 0.0: continue
-        if Qnew[j,j] == 0.0: continue
+        if Qnew[i,i] == 0.0: continue
         delta = random.expovariate(1.0/(Qnew[i,j])) - Qnew[i,j] # so that it's averaged at zero change, but has a minimum value of changing Q[j,j] down only to zero
 
         if np.isinf(delta): continue
@@ -923,16 +923,18 @@ def monte_carlo_milestoning_nonreversible_error(Q0, N_pre, R_pre, p_equil, T_tot
         new_ij = N[i,j] * log(Qnew[i,j] + delta) - ((Qnew[i,j] + delta) * R[i])
         old_ij = N[i,j] * log(Qnew[i,j]) - ((Qnew[i,j]) * R[i])
         p_acc = (new_ij - old_ij) # + (new_jj - old_jj)
-        #print log(r), p_acc
+        print "N and R", N[i,j], R[i]
+        print "Likliehood", new_ij, old_ij
+        print i, j, log(r), p_acc, delta
         if log(r) <= p_acc: # this can be directly compared to the log of the random variable
-          #print "accepted"
+          print "accepted"
           Qnew[i,i] = Qnew[i,i] - delta
           Qnew[i,j] = Qnew[i,j] + delta
-        #else:
-          #print "reject"
+        else:
+          print "reject"
 
 
-    #print Qnew 
+    print Qnew 
     if counter % (skip+1) == 0: # then save this result for later analysis
       Q_mats.append(Qnew)
     Q = Qnew
@@ -1123,8 +1125,8 @@ def main():
     if doing_error == True:
       mfpt_list = []
       k_off_list = []
-      #Q_mats = monte_carlo_milestoning_error(Q, N, R, p_equil,T_tot, num = error_number, skip = error_skip)
-      Q_mats = monte_carlo_milestoning_nonreversible_error(Q, N, R, p_equil, T_tot, num = error_number, skip = error_skip)
+      Q_mats = monte_carlo_milestoning_error(Q, N, R, p_equil,T_tot, num = error_number, skip = error_skip)
+      #Q_mats = monte_carlo_milestoning_nonreversible_error(Q, N, R, p_equil, T_tot, num = error_number, skip = error_skip)
       #print Q_mats
       for Q_err in Q_mats:
         T_err = calc_MFPT_vec(Q_err)
