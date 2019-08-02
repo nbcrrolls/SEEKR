@@ -15,6 +15,7 @@ from collections import defaultdict
 from itertools import chain
 #import pandas as pd
 import matplotlib.pyplot as plt
+plt.switch_backend('agg')
 import pickle
 
 
