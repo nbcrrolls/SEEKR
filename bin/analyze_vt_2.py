@@ -681,91 +681,6 @@ def calc_MFPT_vec(Q):
 
   return T
 
-def bak_monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, skip = 0):
-  m = N_pre.shape[0] #get size of count matrix
-  Q = Q0
-  Q_mats = []
-  N = []
-  R = []
-  
-  N = T_tot * N_pre
-  R = T_tot * R_pre
-
-  print "Q", Q.shape
-  print Q
-  for counter in range(num*(skip+1)):
-    Qnew =  np.zeros((m,m)) #np.matrix(np.copy(T))
-    for i in range(m): # rows
-      for j in range(m): # columns
-        Qnew[i,j] = Q[i,j]
-
-    r1 = random.random() #genarate uniform random number for do reversible element shift
-    r2 = random.random() #genarate uniform random number for acceptance probability
-    
-    print "r1", r1
-
-    #if r1 < 0.5:  #then do reversible element shift
-    i = random.randint(0,m-1)
-    j = random.randint(0,m-1)
-    print "r" , r2, "i", i, "j", j 
-      #print "N", N.shape, N
-      #print "R", R.shape, R
-      #print "Q new", Qnew
-
-
-    if Qnew[i][j] == 0.0: 
-      print "skip"
-      continue
-    if i == j: 
-      print "skip"
-      continue
-
-    minvar = min(-Qnew[i,i], Qnew[i,j])
-    #delta = np.random.normal(minvar, minvar)
-    #delta = random.uniform(-2*minvar, minvar)
-    delta = np.random.gamma(N[i,j]-1,1/R[i])
-    #print "gamma", gamma
-    print "delta", delta
-
-    log_p_Q_new = N[i,j] * log(Qnew[i,j] - delta) + -(Qnew[i,j] - delta) * R[i] + -(Qnew[i,i] + delta) * R[i]
-
-
-    log_p_Q_old = N[i,j] * log(Qnew[i,j]) + -(Qnew[i,j]) * R[i] + -(Qnew[i,i]) * R[i]
-
-    #print "p_prop", p_prop
-    #print "log(p_prop", log_p_prop
-    print "log P(Q_new)", log_p_Q_new
-    print "log P(Q_old)", log_p_Q_old
-
-      #print "ratio", p_Q_new/ p_Q_old
-
-      #p_acc = log_p_prop + log_p_Q_new - log_p_Q_old  #acceptance in log - likliehood
-
-      
-    p_acc =  log_p_Q_new - log_p_Q_old
-    print "p_acc", p_acc, "r", log(r2)
-
-    if log(r2) >= p_acc: #log(r) can be directly compared to log-likeliehood acceptance, p_acc
-        print "performing reversible element shift..."
-        
-
-        Qnew[i,i] = (Qnew[i,i]) + delta
-        #Qnew[j,j] = (Qnew[j,j]) + (pi[i] / pi[j] * delta)
-        Qnew[i,j] = Qnew[i,j] - delta
-        #Qnew[j,i] = Qnew[j,i] - (pi[i] / pi[j] * delta)
-        # Qnew[i,i] = -(abs(Qnew[i,i]) + delta)
-        # Qnew[j,j] = -(abs(Qnew[j,j]) + (pi[i] / pi[j] * delta))
-        # Qnew[i,j] = abs(Qnew[i,j]) - delta
-        # Qnew[j,i] = abs(Qnew[j,i]) - (pi[i] / pi[j] * delta)
-
-        print Qnew
-
-    if counter % (skip +1) == 0:
-      print "append Qmat"	
-      Q_mats.append(Qnew)
-      #print Q_mats
-    Q = Qnew
-  return Q_mats
 
 def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, skip = 0):
   '''Samples distribution of rate matrices assumming a poisson (gamma) distribution with parameters Nij and Ri using Markov chain Monte Carlo
@@ -777,6 +692,9 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
   Q_mats = []
   N = []
   R = []
+  k_off_list = []
+  running_avg = []
+  running_std = []
   
   N = T_tot * N_pre
   R = T_tot * R_pre
@@ -794,20 +712,6 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
       Q_test[i,j] = Q[i,j]
 
 
-  #Q_test[:][-1] = 1 
-  #print "Q_test", Q_test.shape, Q_test
-  #print "transpose", Q_test.T
-
-  
-  # foo = np.zeros(m, dtype="float")
-  # foo[-1] = 1.0
-  # foo2 = np.transpose(foo)
-
-  # print "foo", foo2.shape
-
-
-
-
   for i in range(m):
     for j in range(m):
        if i==j: continue
@@ -815,25 +719,15 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
     #tau[i] = 1 / np.sum(Q_test[i])
   
   print "P" , P
-  # print "tau", tau
-
-  #print "p_equil"
-  #print p_equil
-
+  
   ## calculate initial equilibrium flux by solving: pi = pi Q0  -- left eigenvector of Q0
   val, vec = la.eigs(P.T, k = 1, which= 'LM')
 
-  #print val.real
-  #print "vec", vec.real
-
   pi = vec[:,0].real
 
-  #print "pi", pi
   pi /= pi.sum()
 
   print "normalized", pi
-
-  #print sum(pi)
 
   pi_ref = pi[-1]
   dg = np.zeros(m)
@@ -874,28 +768,28 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
       for j in range(m): # columns
         Qnew[i,j] = Q[i,j]
     ##Generate random variables for step
-    r1 = random.random() #genarate uniform random number for do reversible element shift
+    #r1 = random.random() #genarate uniform random number for do reversible element shift
     r2 = random.random() #genarate uniform random number for acceptance probability
     
-    print "r1", r1
+    #print "r1", r1
     i = random.randint(0,m-1)
     j = random.randint(0,m-1)
-    print "r" , r2, "i", i, "j", j
+    #print "r" , r2, "i", i, "j", j
 
 
     if Qnew[i][j] == 0.0: 
-      print "skip"
+      #print "skip"
       continue
     if i == j: 
-      print "skip"
+      #print "skip"
       continue
       
-    print "q_ij", Qnew[i,j]
+    #print "q_ij", Qnew[i,j]
     Q_gamma = gamma.rvs(N[i,j], scale = 1/R[i])
-    print "gamma", Q_gamma
+    #print "gamma", Q_gamma
 
     delta =  Qnew[i,j] - Q_gamma
-    print "delta", delta
+    #print "delta", delta
 
     log_p_Q_new = N[i,j] * log(Q[i,j] - delta) + (-Q[i,j] - delta) * R[i] + (-Q[i,i] + delta) * R[i]
 
@@ -903,19 +797,15 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
     log_p_Q_old = N[i,j] * log(Q[i,j]) + (-Q[i,i]) * R[i]
 
       
-    print "log P(Q_new)", log_p_Q_new
-    print "log P(Q_old)", log_p_Q_old
-
-      #print "ratio", p_Q_new/ p_Q_old
-
-      #p_acc = log_p_prop + log_p_Q_new - log_p_Q_old  #acceptance in log - likliehood
+    #print "log P(Q_new)", log_p_Q_new
+    #print "log P(Q_old)", log_p_Q_old
 
       
     p_acc =  log_p_Q_new - log_p_Q_old
-    print "p_acc", p_acc, "r", log(r2)
+    #print "p_acc", p_acc, "r", log(r2)
       
     if log(r2) >= p_acc: #log(r) can be directly compared to log-likeliehood acceptance, p_acc
-      print "performing non-reversible element shift..."
+      #print "performing non-reversible element shift..."
         
 
       Qnew[i,i] = (Qnew[i,i]) + delta
@@ -927,77 +817,96 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
         # Qnew[i,j] = abs(Qnew[i,j]) - delta
         # Qnew[j,i] = abs(Qnew[j,i]) - (pi[i] / pi[j] * delta)
 
-      print Qnew
-    else:
-      print "reject shift"
+      #print Qnew
+    #else:
+    #  print "reject shift"
 
       
     if counter % (skip +1) == 0:
-      print "append Qmat"	
-      Q_mats.append(Qnew)
-      #print Q_mats
+      T_err = calc_MFPT_vec(Qnew)
+        #print "T", T_err
+        #mfpt_list.append(T_err[0])
+      k_off_list.append(1e15/T_err[0])
+      running_avg.append(np.average(k_off_list))
+      running_std.append(np.std(k_off_list))
+      #mfpt_std = np.std(mfpt_list)
+      #k_off_std = np.std(k_off_list)
+
+      #Q_mats.append(Qnew)
     Q = Qnew
-  return Q_mats
+  return k_off_list, running_avg, running_std #Q_mats
+ 
 
 
-def monte_carlo_milestoning_nonreversible_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 20, skip = 0):
-  ''' Samples a distribution of rate matrices that are nonreversible
-      using Markov Chain Monte Carlo method
+# def monte_carlo_milestoning_nonreversible_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 20, skip = 0):
+#   ''' ***** OLD FROM LVW ORIGINAL SEEKR *****
+#   Samples a distribution of rate matrices that are nonreversible
+#       using Markov Chain Monte Carlo method
 
-      The distribution being sampled is:
-      p(Q|N) = p(Q)p(N|Q)/p(N) = p(Q) PI(q_ij**N_ij * exp(-q_ij * R_ij))
+#       The distribution being sampled is:
+#       p(Q|N) = p(Q)p(N|Q)/p(N) = p(Q) PI(q_ij**N_ij * exp(-q_ij * R_ij))
 
-      N = count matrix
-      R = transition times
+#       N = count matrix
+#       R = transition times
 
-  '''
-  #Q0, N_sum = count_mat_to_rate_mat(N, avg_t) # get a rate matrix and a sum of counts vector
-  m = Q0.shape[0] # the size of the matrix
-  Q = Q0
-  Q_mats = []
-  N = []
-  R = []
+#   '''
+#   #Q0, N_sum = count_mat_to_rate_mat(N, avg_t) # get a rate matrix and a sum of counts vector
+#   m = Q0.shape[0] # the size of the matrix
+#   Q = Q0
+#   Q_mats = []
+#   N = []
+#   R = []
   
-  N = T_tot * N_pre
-  R = T_tot * R_pre 
+#   N = T_tot * N_pre
+#   R = T_tot * R_pre 
 
 
-  for counter in range(num*(skip+1)):
-    Qnew =  np.zeros((m,m)) #np.matrix(np.copy(T))
-    for i in range(m): # rows
-      for j in range(m): # columns
-        Qnew[i,j] = Q[i,j]
+#   for counter in range(num*(skip+1)):
+#     Qnew =  np.zeros((m,m)) #np.matrix(np.copy(T))
+#     for i in range(m): # rows
+#       for j in range(m): # columns
+#         Qnew[i,j] = Q[i,j]
 
-    for i in range(m): # rows
-      for j in range(m): # columns
-        if i == j: continue
-        if Qnew[i,j] == 0.0: continue
-        if Qnew[i,i] == 0.0: continue
-        delta = random.expovariate(1.0/(Qnew[i,j])) - Qnew[i,j] # so that it's averaged at zero change, but has a minimum value of changing Q[j,j] down only to zero
+#     for i in range(m): # rows
+#       for j in range(m): # columns
+#         if i == j: continue
+#         if Qnew[i,j] == 0.0: continue
+#         if Qnew[i,i] == 0.0: continue
+#         delta = random.expovariate(1.0/(Qnew[i,j])) - Qnew[i,j] # so that it's averaged at zero change, but has a minimum value of changing Q[j,j] down only to zero
 
-        if np.isinf(delta): continue
-        r = random.random()
+#         if np.isinf(delta): continue
+#         r = random.random()
 
-        # NOTE: all this math is being done in logarithmic form first (log-likelihood)
-        new_ij = N[i,j] * log(Qnew[i,j] + delta) - ((Qnew[i,j] + delta) * R[i])
-        old_ij = N[i,j] * log(Qnew[i,j]) - ((Qnew[i,j]) * R[i])
-        p_acc = (new_ij - old_ij) # + (new_jj - old_jj)
-        print "N and R", N[i,j], R[i]
-        print "Likliehood", new_ij, old_ij
-        print i, j, log(r), p_acc, delta
-        if log(r) <= p_acc: # this can be directly compared to the log of the random variable
-          print "accepted"
-          Qnew[i,i] = Qnew[i,i] - delta
-          Qnew[i,j] = Qnew[i,j] + delta
-        else:
-          print "reject"
+#         # NOTE: all this math is being done in logarithmic form first (log-likelihood)
+#         new_ij = N[i,j] * log(Qnew[i,j] + delta) - ((Qnew[i,j] + delta) * R[i])
+#         old_ij = N[i,j] * log(Qnew[i,j]) - ((Qnew[i,j]) * R[i])
+#         p_acc = (new_ij - old_ij) # + (new_jj - old_jj)
+#         print "N and R", N[i,j], R[i]
+#         print "Likliehood", new_ij, old_ij
+#         print i, j, log(r), p_acc, delta
+#         if log(r) <= p_acc: # this can be directly compared to the log of the random variable
+#           print "accepted"
+#           Qnew[i,i] = Qnew[i,i] - delta
+#           Qnew[i,j] = Qnew[i,j] + delta
+#         else:
+#           print "reject"
 
 
-    print Qnew 
-    if counter % (skip+1) == 0: # then save this result for later analysis
-      Q_mats.append(Qnew)
-    Q = Qnew
-  return Q_mats
+
+#     print Qnew 
+#     if counter % (skip+1) == 0: # then save this result for later analysis
+#       T_err = calc_MFPT_vec(Q_new)
+#         #print "T", T_err
+#         #mfpt_list.append(T_err[0])
+#       k_off_list.append(1e15/T_err[0])
+#       running_avg.append(np.average(k_off_list))
+#       running_std.append(np.std(k_off_list))
+#       #mfpt_std = np.std(mfpt_list)
+#       #k_off_std = np.std(k_off_list)
+
+#       #Q_mats.append(Qnew)
+#     Q = Qnew
+#   return k_off_list, running_avg, running_std #Q_mats
 
 def plot_conv(N_conv, R_conv, k_conv, conv_intervals, k_cell_conv, p_equil_conv):
   fig= plt.figure()
@@ -1078,6 +987,24 @@ def plot_conv(N_conv, R_conv, k_conv, conv_intervals, k_cell_conv, p_equil_conv)
   pickle.dump(fig, open('conv.fig.pickle', 'wb'))
   plt.show()
   return     
+
+def plot_MCMC_conv(running_avg, running_std):
+  fig= plt.figure()
+  ax = fig.add_subplot(2,1,1,)
+  ax.plot(running_avg)
+  ax.set_ylabel('Average off rate (1/s)')
+  ax.set_xlabel('MCMC Samples')
+  ax2 = fig.add_subplot(2,1,2,)
+  ax2.plot(running_std)
+  ax2.set_ylabel('off rate st. dev. (1/s)')
+  ax2.set_xlabel('MCMC Samples')
+
+  plt.savefig('MCMC_conv.png', format ='png', dpi=300 )
+  pickle.dump(fig, open('MCMC.fig.pickle', 'wb'))
+  plt.show()
+  return 
+
+
 
 
 def main():
@@ -1182,16 +1109,16 @@ def main():
     if doing_error == True:
       mfpt_list = []
       k_off_list = []
-      Q_mats = monte_carlo_milestoning_error(Q, N, R, p_equil,T_tot, num = error_number, skip = error_skip)
+      k_off_list, running_avg, running_std = monte_carlo_milestoning_error(Q, N, R, p_equil,T_tot, num = error_number, skip = error_skip)
       #Q_mats = monte_carlo_milestoning_nonreversible_error(Q, N, R, p_equil, T_tot, num = error_number, skip = error_skip)
       #print Q_mats
-      for Q_err in Q_mats:
-      	#print Q_err
-        T_err = calc_MFPT_vec(Q_err)
-        #print "T", T_err
-        mfpt_list.append(T_err[0])
-        k_off_list.append(1e15/T_err[0])
-      mfpt_std = np.std(mfpt_list)
+      # for Q_err in Q_mats:
+      # 	#print Q_err
+      #   T_err = calc_MFPT_vec(Q_err)
+      #   #print "T", T_err
+      #   mfpt_list.append(T_err[0])
+      #   k_off_list.append(1e15/T_err[0])
+      #mfpt_std = np.std(mfpt_list)
       k_off_std = np.std(k_off_list)
 
     MFPT = T[0]
@@ -1203,6 +1130,7 @@ def main():
       #print len(k_off_list) 
       #print k_off_list
       print "k_off: " , k_off," +- ", k_off_std, " s^-1" 
+      plot_MCMC_conv(running_avg, running_std)
     else:
       print "k_off: " , k_off, " s^-1" 
 
