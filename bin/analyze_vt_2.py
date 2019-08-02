@@ -835,6 +835,7 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
 
       #Q_mats.append(Qnew)
     Q = Qnew
+  print "final MCMC matrix", Q
   return k_off_list, running_avg, running_std #Q_mats
  
 
