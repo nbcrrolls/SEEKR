@@ -5,6 +5,7 @@ from math import exp, log
 from pprint import pprint
 import numpy as np
 from scipy.sparse import linalg as la
+from scipy.stats import gamma as gamma
 from copy import deepcopy
 import xml.etree.ElementTree as ET
 from subprocess import check_output
@@ -680,7 +681,7 @@ def calc_MFPT_vec(Q):
 
   return T
 
-def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, skip = 0):
+def bak_monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, skip = 0):
   m = N_pre.shape[0] #get size of count matrix
   Q = Q0
   Q_mats = []
@@ -766,7 +767,7 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
     Q = Qnew
   return Q_mats
 
-def old_monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, skip = 0):
+def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, skip = 0):
   '''Samples distribution of rate matrices assumming a poisson (gamma) distribution with parameters Nij and Ri using Markov chain Monte Carlo
     Enforces detailed Balance-- using a modified version of Algorithm 4 form Noe 2008 for rate matrices.--  
   Distribution is:  p(Q|N) = p(Q)p(N|Q)/p(N) = p(Q) PI(q_ij**N_ij * exp(-q_ij * Ri))
@@ -868,167 +869,69 @@ def old_monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 10
   # print "foo"
   Qnew = Q 
   for counter in range(num*(skip+1)):
-
+    Qnew =  np.zeros((m,m)) #np.matrix(np.copy(T))
+    for i in range(m): # rows
+      for j in range(m): # columns
+        Qnew[i,j] = Q[i,j]
     ##Generate random variables for step
     r1 = random.random() #genarate uniform random number for do reversible element shift
     r2 = random.random() #genarate uniform random number for acceptance probability
     
     print "r1", r1
-
-    if r1 < 0.5:  #then do reversible element shift
-      i = random.randint(0,m-1)
-      j = random.randint(0,m-1)
-      print "r" , r2, "i", i, "j", j 
-      #print "N", N.shape, N
-      #print "R", R.shape, R
-      #print "Q new", Qnew
+    i = random.randint(0,m-1)
+    j = random.randint(0,m-1)
+    print "r" , r2, "i", i, "j", j
 
 
-      if Qnew[i][j] == 0.0: 
-        print "skip"
-        continue
-      if i == j: 
-        print "skip"
-        continue
+    if Qnew[i][j] == 0.0: 
+      print "skip"
+      continue
+    if i == j: 
+      print "skip"
+      continue
       
+    print "q_ij", Qnew[i,j]
+    Q_gamma = gamma.rvs(N[i,j], scale = 1/R[i])
+    print "gamma", Q_gamma
 
-      #print max(Qnew[i,i], pi[j]/pi[i] * Qnew[j,j]), Qnew[i,j]
-      ## Generate random perturbation, delta, bounded to prevent any Q from changing sign
-      #delta = random.uniform(max(Qnew[i,i], (pi[j]/pi[i] * Qnew[j,j])), Qnew[i,j])
-      
-      #delta = random.uniform(0, min(-Qnew[i,i], -(pi[j]/pi[i] * Qnew[j,j]), Qnew[i,j]))
-      
-      # print -Qnew[i,i], -(pi[j]/pi[i] * Qnew[j,j]), Qnew[i,j]
-      # print min(-Qnew[i,i], -(pi[j]/pi[i] * Qnew[j,j]), Qnew[i,j])
-      minvar = min(-Qnew[i,i], Qnew[i,j])
-      #print "minvar", minvar
-      delta = np.random.normal(minvar, minvar)
-      #delta = predelta - minvar
+    delta =  Qnew[i,j] - Q_gamma
+    print "delta", delta
 
-      #delta = random.uniform(-minvar, minvar)
+    log_p_Q_new = N[i,j] * log(Q[i,j] - delta) + (-Q[i,j] - delta) * R[i] + (-Q[i,i] + delta) * R[i]
 
-      #print "predelta", predelta
-      print "delta", delta
-      #delta = random.expovariate((minvar)) + minvar #average change = 0
-      #delta = np.random.normal(minvar) - minvar
-      if delta >= -Qnew[i,i]: continue
-      #if delta >= -(pi[j]/pi[i] * Qnew[j,j]): continue
-      if delta >= Qnew[i,j]: continue
+
+    log_p_Q_old = N[i,j] * log(Q[i,j]) + (-Q[i,i]) * R[i]
 
       
-
-      # print "p_prop", np.sqrt((Qnew[i,j] - delta)**2 + (Qnew[j,j] - (pi[i]/pi[j]) * delta)**2 /(Qnew[i,j]**2 +Qnew[j,i]**2))
-      # print "Qij", ((Qnew[i,j] - delta)/Qnew[i,j])**N[i,j]
-      # print "Qji", ((Qnew[j,i] - (delta * pi[i]/pi[j])) / Qnew[j,i])**N[j,i]
-      # print "Q_new ji", Qnew[j,i], "pi,i", pi[i], "pi,j", pi[j], "Nji",N[j,i]
-      # print "Pi,i / Pi,j", pi[i]/pi[j]
-      # print "delta * pi,i/Pi,j", delta * (pi[i]/pi[j])
-      # print "Qnew[j,i] - (delta * pi[i]/pi[j])) / Qnew[j,i", (Qnew[j,i] - (delta * pi[i]/pi[j])) / Qnew[j,i]
-
-
-      #print ((Qnew[i,i] + delta) / Qnew[i,i])**N[i,i]
-      #print ((Qnew[j,j] + (pi[i]/pi[j]) * delta) / Qnew[j,j])**N[j,j]
-
-      print "pi", pi
-
-      print "Nij, Nji, Ri, Rj", N[i,j], N[j,i], N[i,i], N[j,j], R[i], R[j]
-
-      # p_prop = np.sqrt(((Qnew[i,j]-delta)**2 + (Q[j,i] - (pi[i]/pi[j])* delta)**2)/(Q[i,j]**2 + Q[j,i]**2)) #necessary since we are enforcing detailed balance and allowing pi to change
-      # log_p_prop = log(p_prop) #needed for log-likeliehood calculation
-
-      # p_Q_new = (Qnew[i,j] - delta)**N[i,j] * np.exp(-(Qnew[i,j] - delta)* R[i]) * (Qnew[j,i] - ((pi[i]/pi[j]) * delta))**N[j,i] * np.exp(-(Qnew[j,i] - ((pi[i]/pi[j]) * delta))* R[j]) * (
-      # 	Q[i,i] + delta)** N[i,i] * np.exp(-(Qnew[i,i] + delta)* R[i]) * (Qnew[j,j] + ((pi[i]/pi[j]) * delta))**N[j,j] * np.exp(-(Qnew[j,j] + ((pi[i]/pi[j]) * delta))* R[j])
-
-      # p_Q_old = (Qnew[i,j])**N[i,j] * np.exp(-(Qnew[i,j])* R[i]) * (Qnew[j,i])**N[j,i] * np.exp(-(Qnew[j,i])* R[j]) * (
-      # 	Q[i,i])** N[i,i] * np.exp(-(Qnew[i,i])* R[i]) * (Qnew[j,j])**N[j,j] * np.exp(-(Qnew[j,j])* R[j])
-      
-      # print N[i,j] * log(Q[i,j] - delta) + (-Q[i,j] - delta) * R[i]
-      # print N[j,i] * log(Q[j,i] - (pi[i]/pi[j]) * delta) + (-Q[j,i] - (pi[i]/pi[j]) * delta) * R[j]
-      # print (-Q[i,i] + delta) * R[i]
-      # print (-Q[j,j] + (pi[i]/pi[j]) * delta) * R[j]
-
-
-      # log_p_Q_new = N[i,j] * log(Q[i,j] - delta) + (-Q[i,j] - delta) * R[i] + N[j,i] * log(Q[j,i] - (pi[i]/pi[j]) * delta) + (-Q[j,i] - (pi[i]/pi[j]) * delta) * R[j] + (
-      # 	-Q[i,i] + delta) * R[i] + (-Q[j,j] + (pi[i]/pi[j]) * delta) * R[j]
-
-
-      # log_p_Q_old = N[i,j] * log(Q[i,j]) + (-Q[i,j]) * R[i] + N[j,i] * log(Q[j,i]) + (-Q[j,i]) * R[j] + (
-      # 	-Q[i,i]) * R[i] + (-Q[j,j]) * R[j]
-
-      log_p_Q_new = N[i,j] * log(Q[i,j] - delta) + (-Q[i,j] - delta) * R[i] + (-Q[i,i] + delta) * R[i]
-
-
-      log_p_Q_old = N[i,j] * log(Q[i,j]) + (-Q[i,i]) * R[i]
-
-      #print "p_prop", p_prop
-      #print "log(p_prop", log_p_prop
-      print "log P(Q_new)", log_p_Q_new
-      print "log P(Q_old)", log_p_Q_old
+    print "log P(Q_new)", log_p_Q_new
+    print "log P(Q_old)", log_p_Q_old
 
       #print "ratio", p_Q_new/ p_Q_old
 
       #p_acc = log_p_prop + log_p_Q_new - log_p_Q_old  #acceptance in log - likliehood
 
       
-      p_acc =  log_p_Q_new - log_p_Q_old
-      print "p_acc", p_acc, "r", log(r2)
-
-      #Calculate acceptance probability for reversible element shift
-      #p_acc = np.sqrt((Qnew[i,j] - delta)**2 + (Qnew[j,j] - (pi[i]/pi[j]) * delta)**2 /(Qnew[i,j]**2 +Qnew[j,i]**2)) * (
-      #(Qnew[i,j] - delta)/Qnew[i,j])**N[i,j] * ((Qnew[j,i] - (pi[i]/pi[j] * delta)) / Qnew[j,i])**N[j,i] #(
-      #* ((Qnew[i,i] + delta) / Qnew[i,i])**N[i,i] * ((Qnew[j,j] + (pi[i]/pi[j]) * delta) / Qnew[j,j])**N[j,j]
-      #print "p_acc", p_acc
+    p_acc =  log_p_Q_new - log_p_Q_old
+    print "p_acc", p_acc, "r", log(r2)
       
-      if log(r2) >= p_acc: #log(r) can be directly compared to log-likeliehood acceptance, p_acc
-        print "performing reversible element shift..."
+    if log(r2) >= p_acc: #log(r) can be directly compared to log-likeliehood acceptance, p_acc
+      print "performing non-reversible element shift..."
         
 
-        Qnew[i,i] = (Qnew[i,i]) + delta
+      Qnew[i,i] = (Qnew[i,i]) + delta
         #Qnew[j,j] = (Qnew[j,j]) + (pi[i] / pi[j] * delta)
-        Qnew[i,j] = Qnew[i,j] - delta
+      Qnew[i,j] = Qnew[i,j] - delta
         #Qnew[j,i] = Qnew[j,i] - (pi[i] / pi[j] * delta)
         # Qnew[i,i] = -(abs(Qnew[i,i]) + delta)
         # Qnew[j,j] = -(abs(Qnew[j,j]) + (pi[i] / pi[j] * delta))
         # Qnew[i,j] = abs(Qnew[i,j]) - delta
         # Qnew[j,i] = abs(Qnew[j,i]) - (pi[i] / pi[j] * delta)
 
-        print Qnew
+      print Qnew
+    else:
+      print "reject shift"
 
-      # else: # do row shift
-      #   #generate random variables
-      #   print "check for row shift..."
-      #   i = random.randint(0,m-1)
-      #   alp = random.uniform(0,(1/(1-Q[i,i])))
-      #   print "alpha", alp
-
-      #   #print np.sum(N[i])
-
-      #   p_acc = alp ** (m - 2 + np.sum(N[i]) - N[i,i]) * ((1 - alp * (1-Qnew[i,i]))/Qnew[i,i]) ** N[i,i]
-    
-
-      #   print "p_acc 2", p_acc
-
-      #   if r2 <= p_acc:
-      #     print "performing row shift"
-      #     for j in range(0,m-1):
-      #       Qnew[i,j] = alp * Qnew[i,j]
-      #     Qnew[i,i] = 0
-      #     Qnew[i,i] = 1- np.sum(Qnew[i])
-
-      #     print Qnew
-
-      #     ## Update stationary distribution
-      #     print "updating stationary distribution"
-
-      #     for j in range(m):
-      #       pi[j] = alp * pi[j] /pi[i] + alp *(1-pi[i])
-
-      #     pi[i] = 0
-      #     pi[i] = 1- np.sum(pi)
-
-      #     print pi
-
-    #print "Pi", pi 
+      
     if counter % (skip +1) == 0:
       print "append Qmat"	
       Q_mats.append(Qnew)
@@ -1191,7 +1094,7 @@ def main():
   parser.add_argument('--nobd', dest="nobd", help="Do not include the BD statistics in the calculation")
   parser.add_argument('--nomd', dest="nomd", help="Do not include the MD statistics in the calculation")
   parser.add_argument('--test', dest="test", help="Run the unittests", action="store_true")
-  parser.add_argument('--doing_error', dest="doing_error", default=True, action = "store_true", help= "whether MCMC error estimate should be performed")
+  parser.add_argument('--doing_error', dest="doing_error", action ="store_true", help= "whether MCMC error estimate should be performed")
   parser.add_argument('--skip', dest='error_skip', type=int, default=1, help="define how many matrix samples to skip when doing MC error estimation" )
   parser.add_argument('--number', dest='error_number', type=int, default=1000, help="define how many matrices to sample for MC error estimation" )
   parser.add_argument('-v','--verbose', dest="verbose", help="verbose output", action="store_true")
@@ -1276,16 +1179,14 @@ def main():
   if calc_type == "off":
     p_equil, N, R, T, T_tot, Q, n_conv, r_conv, k_cell= analyze_kinetics(calc_type, model, bound_dict, doing_error=True, verbose=verbose, bd_time=bd_time, error_number=error_number, error_skip=error_skip)
 
-    doing_error = False
-
     if doing_error == True:
       mfpt_list = []
       k_off_list = []
       Q_mats = monte_carlo_milestoning_error(Q, N, R, p_equil,T_tot, num = error_number, skip = error_skip)
       #Q_mats = monte_carlo_milestoning_nonreversible_error(Q, N, R, p_equil, T_tot, num = error_number, skip = error_skip)
-      print Q_mats
+      #print Q_mats
       for Q_err in Q_mats:
-      	print Q_err
+      	#print Q_err
         T_err = calc_MFPT_vec(Q_err)
         #print "T", T_err
         mfpt_list.append(T_err[0])
@@ -1299,8 +1200,8 @@ def main():
     
     if doing_error == True:
       print "avg k off", np.average(k_off_list)
-      print len(k_off_list) 
-      print k_off_list
+      #print len(k_off_list) 
+      #print k_off_list
       print "k_off: " , k_off," +- ", k_off_std, " s^-1" 
     else:
       print "k_off: " , k_off, " s^-1" 
