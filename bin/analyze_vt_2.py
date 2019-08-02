@@ -773,17 +773,21 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
     r2 = random.random() #genarate uniform random number for acceptance probability
     
     #print "r1", r1
-    i = random.randint(0,m-1)
-    j = random.randint(0,m-1)
+    i = 0
+    j = 0
+    
+    while (Qnew[i][j] == 0.0 or i == j):
+      i = random.randint(0,m-1)
+      j = random.randint(0,m-1)
     #print "r" , r2, "i", i, "j", j
 
 
-    if Qnew[i][j] == 0.0: 
+    #if Qnew[i][j] == 0.0: 
       #print "skip"
-      continue
-    if i == j: 
+    #  continue
+    #if i == j: 
       #print "skip"
-      continue
+    #  continue
       
     #print "q_ij", Qnew[i,j]
     Q_gamma = gamma.rvs(N[i,j], scale = 1/R[i])
