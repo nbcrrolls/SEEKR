@@ -796,10 +796,10 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
     delta =  Qnew[i,j] - Q_gamma
     print "delta", delta
 
-    log_p_Q_new = N[i,j] * log(Q[i,j] - delta) + (-Q[i,j] - delta) * R[i] + (-Q[i,i] + delta) * R[i]
+    log_p_Q_new = N[i,j] * log(Qnew[i,j] - delta) + -(Qnew[i,j] - delta) * R[i] + -(Qnew[i,i] + delta) * R[i]
 
 
-    log_p_Q_old = N[i,j] * log(Q[i,j]) + (-Q[i,i]) * R[i]
+    log_p_Q_old = N[i,j] * log(Qnew[i,j]) + -Qnew[i,j] * R[i] + -Qnew[i,i] * R[i]
 
       
     print "log P(Q_new)", log_p_Q_new
