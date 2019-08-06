@@ -812,7 +812,7 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
     p_acc =  log_p_Q_new - log_p_Q_old
     print "p_acc", p_acc, "r", log(r2)
       
-    if log(r2) >= p_acc: #log(r) can be directly compared to log-likeliehood acceptance, p_acc
+    if log(r2) <= p_acc: #log(r) can be directly compared to log-likeliehood acceptance, p_acc
       print "performing non-reversible element shift..."
         
 
