@@ -779,7 +779,7 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
     while (Qnew[i][j] == 0.0 or i == j):
       i = random.randint(0,m-1)
       j = random.randint(0,m-1)
-    #print "r" , r2, "i", i, "j", j
+    print "r" , r2, "i", i, "j", j
 
 
     #if Qnew[i][j] == 0.0: 
