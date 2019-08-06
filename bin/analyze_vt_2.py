@@ -762,6 +762,9 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
   # print "pi", pi
 
   # print "foo"
+  print "N", N
+  print "R", R
+
   Qnew = Q 
   for counter in range(num*(skip+1)):
     Qnew =  np.zeros((m,m)) #np.matrix(np.copy(T))
