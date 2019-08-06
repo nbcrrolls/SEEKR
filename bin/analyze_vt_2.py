@@ -782,7 +782,7 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
     while (Qnew[i][j] == 0.0 or i == j):
       i = random.randint(0,m-1)
       j = random.randint(0,m-1)
-    print "r" , r2, "i", i, "j", j
+    #print "r" , r2, "i", i, "j", j
 
 
     #if Qnew[i][j] == 0.0: 
@@ -792,12 +792,12 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
       #print "skip"
     #  continue
       
-    print "q_ij", Qnew[i,j]
+    #print "q_ij", Qnew[i,j]
     Q_gamma = gamma.rvs(N[i,j], scale = 1/R[i])
-    print "gamma", Q_gamma
+    #print "gamma", Q_gamma
 
     delta =  Qnew[i,j] - Q_gamma
-    print "delta", delta
+    #print "delta", delta
 
     log_p_Q_new = N[i,j] * log(Qnew[i,j] - delta) + -(Qnew[i,j] - delta) * R[i] + -(Qnew[i,i] + delta) * R[i]
 
@@ -805,15 +805,15 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
     log_p_Q_old = N[i,j] * log(Qnew[i,j]) + -Qnew[i,j] * R[i] + -Qnew[i,i] * R[i]
 
       
-    print "log P(Q_new)", log_p_Q_new
-    print "log P(Q_old)", log_p_Q_old
+    #print "log P(Q_new)", log_p_Q_new
+    #print "log P(Q_old)", log_p_Q_old
 
       
     p_acc =  log_p_Q_new - log_p_Q_old
-    print "p_acc", p_acc, "r", log(r2)
+    #print "p_acc", p_acc, "r", log(r2)
       
     if log(r2) <= p_acc: #log(r) can be directly compared to log-likeliehood acceptance, p_acc
-      print "performing non-reversible element shift..."
+      #print "performing non-reversible element shift..."
         
 
       Qnew[i,i] = (Qnew[i,i]) + delta
@@ -825,9 +825,9 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
         # Qnew[i,j] = abs(Qnew[i,j]) - delta
         # Qnew[j,i] = abs(Qnew[j,i]) - (pi[i] / pi[j] * delta)
 
-      print Qnew
-    else:
-      print "reject shift"
+      #print Qnew
+    #else:
+      #print "reject shift"
 
       
     if counter % (skip +1) == 0:
