@@ -683,7 +683,7 @@ def calc_MFPT_vec(Q):
   return T
 
 
-def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, skip = 0):
+def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, skip = 0, verbose= False):
   '''Samples distribution of rate matrices assumming a poisson (gamma) distribution with parameters Nij and Ri using Markov chain Monte Carlo
     Enforces detailed Balance-- using a modified version of Algorithm 4 form Noe 2008 for rate matrices.--  
   Distribution is:  p(Q|N) = p(Q)p(N|Q)/p(N) = p(Q) PI(q_ij**N_ij * exp(-q_ij * Ri))
@@ -719,7 +719,7 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
        P[i,j] = Q_test[i,j] / np.sum(Q_test[i])
     #tau[i] = 1 / np.sum(Q_test[i])
   
-  print "P" , P
+  if verbose: print "P" , P
   
   ## calculate initial equilibrium flux by solving: pi = pi Q0  -- left eigenvector of Q0
   val, vec = la.eigs(P.T, k = 1, which= 'LM')
@@ -728,7 +728,7 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
 
   pi /= pi.sum()
 
-  print "normalized", pi
+  #print "normalized", pi
 
   pi_ref = pi[-1]
   dg = np.zeros(m)
@@ -782,7 +782,7 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
     while (Qnew[i][j] == 0.0 or i == j):
       i = random.randint(0,m-1)
       j = random.randint(0,m-1)
-    print "r" , r2, "i", i, "j", j
+    if verbose: print "r" , r2, "i", i, "j", j
 
 
     #if Qnew[i][j] == 0.0: 
@@ -792,28 +792,28 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
       #print "skip"
     #  continue
       
-    print "q_ij", Qnew[i,j]
+    if verbose: print "q_ij", Qnew[i,j]
     Q_gamma = 0
-    while (Q_gamma << 0.00000000001):
+    while (Q_gamma <= Qnew[i,j]*0.00000000001):
       Q_gamma = gamma.rvs(N[i,j], scale = 1/R[i])
-    print "gamma", Q_gamma
+    if verbose: print "gamma", Q_gamma
 
     delta =  Qnew[i,j] - Q_gamma
-    print "delta", delta
+    if verbose: print "delta", delta
 
     log_p_Q_old = N[i,j] * log(Qnew[i,j]) + -Qnew[i,j] * R[i] + -Qnew[i,i] * R[i]
 
     log_p_Q_new = N[i,j] * log(Qnew[i,j] - delta) + -(Qnew[i,j] - delta) * R[i] + -(Qnew[i,i] + delta) * R[i]
 
-    print "log P(Q_new)", log_p_Q_new
-    print "log P(Q_old)", log_p_Q_old
+    if verbose: print "log P(Q_new)", log_p_Q_new
+    if verbose: print "log P(Q_old)", log_p_Q_old
 
       
     p_acc =  log_p_Q_new - log_p_Q_old
-    #print "p_acc", p_acc, "r", log(r2)
+    if verbose: print "p_acc", p_acc, "r", log(r2)
       
     if log(r2) <= p_acc: #log(r) can be directly compared to log-likeliehood acceptance, p_acc
-      #print "performing non-reversible element shift..."
+      if verbose: print "performing non-reversible element shift..."
         
 
       Qnew[i,i] = (Qnew[i,i]) + delta
@@ -825,7 +825,7 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
         # Qnew[i,j] = abs(Qnew[i,j]) - delta
         # Qnew[j,i] = abs(Qnew[j,i]) - (pi[i] / pi[j] * delta)
 
-      #print Qnew
+      if verbose: print Qnew
     #else:
       #print "reject shift"
 
@@ -1118,7 +1118,7 @@ def main():
     if doing_error == True:
       mfpt_list = []
       k_off_list = []
-      k_off_list, running_avg, running_std = monte_carlo_milestoning_error(Q, N, R, p_equil,T_tot, num = error_number, skip = error_skip)
+      k_off_list, running_avg, running_std = monte_carlo_milestoning_error(Q, N, R, p_equil,T_tot, num = error_number, skip = error_skip, verbose=verbose)
       #Q_mats = monte_carlo_milestoning_nonreversible_error(Q, N, R, p_equil, T_tot, num = error_number, skip = error_skip)
       #print Q_mats
       # for Q_err in Q_mats:
