@@ -794,7 +794,7 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
       
     print "q_ij", Qnew[i,j]
     Q_gamma = 0
-    while (Q_gamma << 0.00000000001):
+    while (float(Q_gamma) <= 0.00000000001):
       Q_gamma = gamma.rvs(N[i,j], scale = 1/R[i])
     print "gamma", Q_gamma
 
