@@ -779,10 +779,16 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
     i = 0
     j = 0
 
-    while (Qnew[i][j] == 0.0 or i == j):
-      i = random.randint(0,m-1)
-      j = random.randint(0,m-1)
-    if verbose: print "r" , r2, "i", i, "j", j
+    for i in range(m): # rows
+      for j in range(m): # columns
+        if i == j: continue
+        if Qnew[i,j] == 0.0: continue
+        if Qnew[j,j] == 0.0: continue
+
+    # while (Qnew[i][j] == 0.0 or i == j):
+    #   i = random.randint(0,m-1)
+    #   j = random.randint(0,m-1)
+    # if verbose: print "r" , r2, "i", i, "j", j
 
 
     #if Qnew[i][j] == 0.0: 
@@ -792,42 +798,42 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
       #print "skip"
     #  continue
       
-    if verbose: print "q_ij", Qnew[i,j]
-    Q_gamma = 0
-    while (float(Q_gamma) <= 0.00000000001):
-      Q_gamma = gamma.rvs(N[i,j], scale = 1/R[i])
-    if verbose: print "gamma", Q_gamma
+      if verbose: print "q_ij", Qnew[i,j]
+      Q_gamma = 0
+      while (float(Q_gamma) <= 0.00000000001):
+        Q_gamma = gamma.rvs(N[i,j], scale = 1/R[i])
+      if verbose: print "gamma", Q_gamma
 
-    delta =  Qnew[i,j] - Q_gamma
-    if verbose: print "delta", delta
+      delta =  Qnew[i,j] - Q_gamma
+      if verbose: print "delta", delta
 
-    log_p_Q_old = N[i,j] * log(Qnew[i,j]) + -Qnew[i,j] * R[i] + -Qnew[i,i] * R[i]
+      log_p_Q_old = N[i,j] * log(Qnew[i,j]) + -Qnew[i,j] * R[i] + -Qnew[i,i] * R[i]
 
-    log_p_Q_new = N[i,j] * log(Qnew[i,j] - delta) + -(Qnew[i,j] - delta) * R[i] + -(Qnew[i,i] + delta) * R[i]
+      log_p_Q_new = N[i,j] * log(Qnew[i,j] - delta) + -(Qnew[i,j] - delta) * R[i] + -(Qnew[i,i] + delta) * R[i]
 
-    if verbose: print "log P(Q_new)", log_p_Q_new
-    if verbose: print "log P(Q_old)", log_p_Q_old
+      if verbose: print "log P(Q_new)", log_p_Q_new
+      if verbose: print "log P(Q_old)", log_p_Q_old
 
-      
-    p_acc =  log_p_Q_new - log_p_Q_old
-    if verbose: print "p_acc", p_acc, "r", log(r2)
-      
-    if log(r2) <= p_acc: #log(r) can be directly compared to log-likeliehood acceptance, p_acc
-      if verbose: print "performing non-reversible element shift..."
         
+      p_acc =  log_p_Q_new - log_p_Q_old
+      if verbose: print "p_acc", p_acc, "r", log(r2)
+        
+      if log(r2) <= p_acc: #log(r) can be directly compared to log-likeliehood acceptance, p_acc
+        if verbose: print "performing non-reversible element shift..."
+          
 
-      Qnew[i,i] = (Qnew[i,i]) + delta
-        #Qnew[j,j] = (Qnew[j,j]) + (pi[i] / pi[j] * delta)
-      Qnew[i,j] = Qnew[i,j] - delta
-        #Qnew[j,i] = Qnew[j,i] - (pi[i] / pi[j] * delta)
-        # Qnew[i,i] = -(abs(Qnew[i,i]) + delta)
-        # Qnew[j,j] = -(abs(Qnew[j,j]) + (pi[i] / pi[j] * delta))
-        # Qnew[i,j] = abs(Qnew[i,j]) - delta
-        # Qnew[j,i] = abs(Qnew[j,i]) - (pi[i] / pi[j] * delta)
+        Qnew[i,i] = (Qnew[i,i]) + delta
+          #Qnew[j,j] = (Qnew[j,j]) + (pi[i] / pi[j] * delta)
+        Qnew[i,j] = Qnew[i,j] - delta
+          #Qnew[j,i] = Qnew[j,i] - (pi[i] / pi[j] * delta)
+          # Qnew[i,i] = -(abs(Qnew[i,i]) + delta)
+          # Qnew[j,j] = -(abs(Qnew[j,j]) + (pi[i] / pi[j] * delta))
+          # Qnew[i,j] = abs(Qnew[i,j]) - delta
+          # Qnew[j,i] = abs(Qnew[j,i]) - (pi[i] / pi[j] * delta)
 
-      if verbose: print Qnew
-    #else:
-      #print "reject shift"
+        if verbose: print Qnew
+      #else:
+        #print "reject shift"
 
       
     if counter % (skip +1) == 0:
