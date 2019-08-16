@@ -15,7 +15,7 @@ from collections import defaultdict
 from itertools import chain
 #import pandas as pd
 import matplotlib.pyplot as plt
-plt.switch_backend('agg')
+#plt.switch_backend('agg')
 import pickle
 
 
@@ -707,31 +707,31 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
   tau = np.zeros(m)
 
 ## test for convirting Q to P and tau
-  for i in range(m):
-    for j in range(m):
-      if i == j: continue 
-      Q_test[i,j] = Q[i,j]
+  # for i in range(m):
+  #   for j in range(m):
+  #     if i == j: continue 
+  #     Q_test[i,j] = Q[i,j]
 
 
-  for i in range(m):
-    for j in range(m):
-       if i==j: continue
-       P[i,j] = Q_test[i,j] / np.sum(Q_test[i])
-    #tau[i] = 1 / np.sum(Q_test[i])
+  # for i in range(m):
+  #   for j in range(m):
+  #      if i==j: continue
+  #      P[i,j] = Q_test[i,j] / np.sum(Q_test[i])
+  #   #tau[i] = 1 / np.sum(Q_test[i])
   
-  if verbose: print "P" , P
+  # if verbose: print "P" , P
   
-  ## calculate initial equilibrium flux by solving: pi = pi Q0  -- left eigenvector of Q0
-  val, vec = la.eigs(P.T, k = 1, which= 'LM')
+  # ## calculate initial equilibrium flux by solving: pi = pi Q0  -- left eigenvector of Q0
+  # val, vec = la.eigs(P.T, k = 1, which= 'LM')
 
-  pi = vec[:,0].real
+  # pi = vec[:,0].real
 
-  pi /= pi.sum()
+  # pi /= pi.sum()
 
-  #print "normalized", pi
+  # #print "normalized", pi
 
-  pi_ref = pi[-1]
-  dg = np.zeros(m)
+  # pi_ref = pi[-1]
+  # dg = np.zeros(m)
 
 
   #for i in range(m):
@@ -803,7 +803,9 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
         if verbose: print "q_ii", Qnew[i,i]
         Q_gamma = 0
         while (abs(Qnew[i,j] - Q_gamma) >= abs(Qnew[i,j]) or abs(Qnew[i,j] - Q_gamma) >= abs(Qnew[i,i])):
-          Q_gamma = gamma.rvs(a=N[i,j], scale = 1/R[i],loc = Q[i,j])
+          Q_gamma = gamma.rvs(a=N[i,j], scale = 1/R[i],)
+          #Q_gamma = gamma.rvs(a=N[i,j], scale = 1/R[i],loc = Q[i,j])
+          
           delta =  Qnew[i,j] - Q_gamma
         if verbose: print "gamma", Q_gamma
 
