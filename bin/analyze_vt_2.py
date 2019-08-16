@@ -776,8 +776,8 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
     r2 = random.random() #genarate uniform random number for acceptance probability
     
     #print "r1", r1
-    i = 0
-    j = 0
+    #i = 0
+    #j = 0
 
     for i in range(m): # rows
       for j in range(m): # columns
@@ -788,7 +788,7 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
     # while (Qnew[i][j] == 0.0 or i == j):
     #   i = random.randint(0,m-1)
     #   j = random.randint(0,m-1)
-    # if verbose: print "r" , r2, "i", i, "j", j
+        if verbose: print "i", i, "j", j
 
 
     #if Qnew[i][j] == 0.0: 
@@ -797,41 +797,50 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
     #if i == j: 
       #print "skip"
     #  continue
+
       
-      if verbose: print "q_ij", Qnew[i,j]
-      Q_gamma = 0
-      while (float(Q_gamma) <= 0.00000000001):
-        Q_gamma = gamma.rvs(N[i,j], scale = 1/R[i])
-      if verbose: print "gamma", Q_gamma
+        if verbose: print "q_ij", Qnew[i,j]
+        if verbose: print "q_ii", Qnew[i,i]
+        Q_gamma = 0
+        while (abs(Qnew[i,j] - Q_gamma) >= abs(Qnew[i,j]) or abs(Qnew[i,j] - Q_gamma) >= abs(Qnew[i,i])):
+          Q_gamma = gamma.rvs(a=N[i,j], scale = 1/R[i],loc = Q[i,j])
+          delta =  Qnew[i,j] - Q_gamma
+        if verbose: print "gamma", Q_gamma
 
-      delta =  Qnew[i,j] - Q_gamma
-      if verbose: print "delta", delta
+        delta =  Qnew[i,j] - Q_gamma
+       # delta = random.expovariate(1.0/(Qnew[i,j])) + Qnew[i,j]
+        if verbose: print "delta", delta
+        if verbose: print "Qnew[i,j]", Qnew[i,j] - delta
+        if verbose: print "Qnew[i,i]", Qnew[i,i] + delta
+        if verbose: print "N_ij", N[i,j]
+        if verbose: print "R_i", R[i]
 
-      log_p_Q_old = N[i,j] * log(Qnew[i,j]) + -Qnew[i,j] * R[i] + -Qnew[i,i] * R[i]
 
-      log_p_Q_new = N[i,j] * log(Qnew[i,j] - delta) + -(Qnew[i,j] - delta) * R[i] + -(Qnew[i,i] + delta) * R[i]
+        log_p_Q_old = N[i,j] * log(Qnew[i,j]) + -Qnew[i,j] * R[i] #+ -Qnew[i,i] * R[i]
 
-      if verbose: print "log P(Q_new)", log_p_Q_new
-      if verbose: print "log P(Q_old)", log_p_Q_old
+        log_p_Q_new = N[i,j] * log(Qnew[i,j] - delta) + -(Qnew[i,j] - delta) * R[i] #+ -(Qnew[i,i] + delta) * R[i]
 
-        
-      p_acc =  log_p_Q_new - log_p_Q_old
-      if verbose: print "p_acc", p_acc, "r", log(r2)
-        
-      if log(r2) <= p_acc: #log(r) can be directly compared to log-likeliehood acceptance, p_acc
-        if verbose: print "performing non-reversible element shift..."
+        if verbose: print "log P(Q_new)", log_p_Q_new
+        if verbose: print "log P(Q_old)", log_p_Q_old
+
+        r2 = random.random()  
+        p_acc =  log_p_Q_new - log_p_Q_old
+        if verbose: print "p_acc", p_acc, "r", log(r2)
           
+        if log(r2) <= p_acc: #log(r) can be directly compared to log-likeliehood acceptance, p_acc
+          if verbose: print "performing non-reversible element shift..."
+            
 
-        Qnew[i,i] = (Qnew[i,i]) + delta
-          #Qnew[j,j] = (Qnew[j,j]) + (pi[i] / pi[j] * delta)
-        Qnew[i,j] = Qnew[i,j] - delta
-          #Qnew[j,i] = Qnew[j,i] - (pi[i] / pi[j] * delta)
-          # Qnew[i,i] = -(abs(Qnew[i,i]) + delta)
-          # Qnew[j,j] = -(abs(Qnew[j,j]) + (pi[i] / pi[j] * delta))
-          # Qnew[i,j] = abs(Qnew[i,j]) - delta
-          # Qnew[j,i] = abs(Qnew[j,i]) - (pi[i] / pi[j] * delta)
+          Qnew[i,i] = (Qnew[i,i]) + delta
+            #Qnew[j,j] = (Qnew[j,j]) + (pi[i] / pi[j] * delta)
+          Qnew[i,j] = Qnew[i,j] - delta
+            #Qnew[j,i] = Qnew[j,i] - (pi[i] / pi[j] * delta)
+            # Qnew[i,i] = -(abs(Qnew[i,i]) + delta)
+            # Qnew[j,j] = -(abs(Qnew[j,j]) + (pi[i] / pi[j] * delta))
+            # Qnew[i,j] = abs(Qnew[i,j]) - delta
+            # Qnew[j,i] = abs(Qnew[j,i]) - (pi[i] / pi[j] * delta)
 
-        if verbose: print Qnew
+          if verbose: print Qnew
       #else:
         #print "reject shift"
 
