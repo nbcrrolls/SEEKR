@@ -819,9 +819,9 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
         if verbose: print "N_ij log(q)", N[i,j]* log(Qnew[i,j] - delta) 
         if verbose: print "Q * R", -(Qnew[i,j] - delta) * R[i]
 
-        log_p_Q_old = N[i,j] * log(Qnew[i,j]) + -Qnew[i,j] * R[i] #+ -Qnew[i,i] * R[i]
+        log_p_Q_old = N[i,j] * log(Qnew[i,j])  - Qnew[i,j] * R[i] #+ -Qnew[i,i] * R[i]
 
-        log_p_Q_new = N[i,j] * log(Qnew[i,j] - delta) + -(Qnew[i,j] - delta) * R[i] #+ -(Qnew[i,i] + delta) * R[i]
+        log_p_Q_new = N[i,j] * log(Qnew[i,j] - delta) - (Qnew[i,j] - delta) * R[i] #+ -(Qnew[i,i] + delta) * R[i]
 
         if verbose: print "log P(Q_new)", log_p_Q_new
         if verbose: print "log P(Q_old)", log_p_Q_old
