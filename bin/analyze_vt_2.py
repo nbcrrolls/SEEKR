@@ -15,7 +15,7 @@ from collections import defaultdict
 from itertools import chain
 #import pandas as pd
 import matplotlib.pyplot as plt
-#plt.switch_backend('agg')
+plt.switch_backend('agg')
 import pickle
 
 
@@ -683,7 +683,7 @@ def calc_MFPT_vec(Q):
   return T
 
 
-def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, skip = 0, verbose= False):
+def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, skip = 100, stride =1,  verbose= False):
   '''Samples distribution of rate matrices assumming a poisson (gamma) distribution with parameters Nij and Ri using Markov chain Monte Carlo
     Enforces detailed Balance-- using a modified version of Algorithm 4 form Noe 2008 for rate matrices.--  
   Distribution is:  p(Q|N) = p(Q)p(N|Q)/p(N) = p(Q) PI(q_ij**N_ij * exp(-q_ij * Ri))
@@ -765,8 +765,10 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
   print "N", N
   print "R", R
 
-  Qnew = Q 
-  for counter in range(num*(skip+1)):
+  Qnew = Q
+  if verbose: print "collecting ", num, " MCMC samples from ", num*(stride)+ skip, " total moves"  
+  for counter in range(num*(stride)+ skip):
+    if verbose: print "MCMC stepnum: ", counter
     Qnew =  np.zeros((m,m)) #np.matrix(np.copy(T))
     for i in range(m): # rows
       for j in range(m): # columns
@@ -802,7 +804,8 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
         if verbose: print "q_ij", Qnew[i,j]
         if verbose: print "q_ii", Qnew[i,i]
         Q_gamma = 0
-        while (abs(Qnew[i,j] - Q_gamma) >= abs(Qnew[i,j]) or abs(Qnew[i,j] - Q_gamma) >= abs(Qnew[i,i])):
+        delta = Qnew[i,j]
+        while ((delta) >= (Qnew[i,j])):# or (Qnew[i,j] - Q_gamma) >= abs(Qnew[i,i])):
           Q_gamma = gamma.rvs(a=N[i,j], scale = 1/R[i],)
           #Q_gamma = gamma.rvs(a=N[i,j], scale = 1/R[i],loc = Q[i,j])
           
@@ -847,18 +850,21 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
       #else:
         #print "reject shift"
 
-      
-    if counter % (skip +1) == 0:
-      T_err = calc_MFPT_vec(Qnew)
-        #print "T", T_err
-        #mfpt_list.append(T_err[0])
-      k_off_list.append(1e15/T_err[0])
-      running_avg.append(np.average(k_off_list))
-      running_std.append(np.std(k_off_list))
-      #mfpt_std = np.std(mfpt_list)
-      #k_off_std = np.std(k_off_list)
+    if counter < skip:
+      print "burn in step:", counter
+      continue  
+    else:
+      if counter % stride == 0:
+        T_err = calc_MFPT_vec(Qnew)
+          #print "T", T_err
+          #mfpt_list.append(T_err[0])
+        k_off_list.append(1e15/T_err[0])
+        running_avg.append(np.average(k_off_list))
+        running_std.append(np.std(k_off_list))
+        #mfpt_std = np.std(mfpt_list)
+        #k_off_std = np.std(k_off_list)
 
-      #Q_mats.append(Qnew)
+        #Q_mats.append(Qnew)
     Q = Qnew
   print "final MCMC matrix", Q
   return k_off_list, running_avg, running_std #Q_mats
@@ -1049,8 +1055,9 @@ def main():
   parser.add_argument('--nomd', dest="nomd", help="Do not include the MD statistics in the calculation")
   parser.add_argument('--test', dest="test", help="Run the unittests", action="store_true")
   parser.add_argument('--doing_error', dest="doing_error", action ="store_true", help= "whether MCMC error estimate should be performed")
-  parser.add_argument('--skip', dest='error_skip', type=int, default=1, help="define how many matrix samples to skip when doing MC error estimation" )
+  parser.add_argument('--skip', dest='error_skip', type=int, default=100, help="define how many matrix samples to skip for burn in when doing MC error estimation" )
   parser.add_argument('--number', dest='error_number', type=int, default=1000, help="define how many matrices to sample for MC error estimation" )
+  parser.add_argument('--stride', dest='error_stride', type=int, default=1, help="define how frequently to save a sample for MC error estimation" )
   parser.add_argument('-v','--verbose', dest="verbose", help="verbose output", action="store_true")
   parser.add_argument('-i','--info', dest="info", help="Print information on transitions without computing anything, including the number of transition statistics read.", action="store_true")
   parser.add_argument('--conv_filename', dest='conv_filename', type=str, default="", help="If provided, an analysis of convergence of the computed value will be performed, and the results will be written to the specified file." )
@@ -1087,6 +1094,7 @@ def main():
   bd_time = 0.0 # something to allow the calculations to work
   error_skip = args['error_skip']
   error_number = args['error_number']
+  error_stride = args['error_stride']
   conv_filename = args['conv_filename']
   conv_stride = args['conv_stride']
   milestone_conv= args['milestone_conv']
@@ -1136,7 +1144,7 @@ def main():
     if doing_error == True:
       mfpt_list = []
       k_off_list = []
-      k_off_list, running_avg, running_std = monte_carlo_milestoning_error(Q, N, R, p_equil,T_tot, num = error_number, skip = error_skip, verbose=verbose)
+      k_off_list, running_avg, running_std = monte_carlo_milestoning_error(Q, N, R, p_equil,T_tot, num = error_number, skip = error_skip,stride = error_stride, verbose=verbose)
       #Q_mats = monte_carlo_milestoning_nonreversible_error(Q, N, R, p_equil, T_tot, num = error_number, skip = error_skip)
       #print Q_mats
       # for Q_err in Q_mats:
@@ -1155,7 +1163,7 @@ def main():
     if doing_error == True:
       print "avg k off", np.average(k_off_list)
       #print len(k_off_list) 
-      #print k_off_list
+      print "k_off entries:", len(k_off_list)
       print "k_off: " , k_off," +- ", k_off_std, " s^-1" 
       plot_MCMC_conv(running_avg, running_std)
     else:
