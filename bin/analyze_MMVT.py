@@ -83,7 +83,7 @@ class Model():
       for rot_milestone in self.rotational_milestones:
         #id_str = '%d_%d' % (site.index, milestone.index)
         directory_name = "anchor_%s_%d" % (pos_milestone.fullname, rot_i)
-        print "directory_name:", directory_name
+        print("directory_name:", directory_name)
 
 class Site():
   ''' object representing a site: a collection of related milestones that share, say, the same origin '''
@@ -138,7 +138,7 @@ class Anchor():
       transition_lines = []
       vt_collisions = []
       file_max_steps = 0  
-      print 'parsing transitions from file:', filename
+      print('parsing transitions from file:', filename)
       for line in open(filename,'r'):
         if re.match(GRID_TRANSITION_COMPILE, line):
           if re.search(INITIAL_TRANSITION_COMPILE, line): continue #we don't want to count a transition for the first milestone touched by the simulation  
@@ -167,7 +167,7 @@ class Anchor():
       replicate += 1
     self.transitions = unsorted_transitions
     self.collisions = unsorted_collisions
-    print 'anchor', self.index, self.offsets
+    print('anchor', self.index, self.offsets)
     return self.total_steps
 
   def get_md_transition_statistics(self, md_time_factor=DEFAULT_MD_TIME_FACTOR, max_step=None, ):
@@ -193,9 +193,9 @@ class Anchor():
 
       if max_step != None and int(stepnum + self.offsets[transition.replicate]) > max_step:
         break
-      if self.index in counts.keys():
-        if src_key in counts[self.index].keys():
-          if dest_key in counts[self.index][src_key].keys():
+      if self.index in list(counts.keys()):
+        if src_key in list(counts[self.index].keys()):
+          if dest_key in list(counts[self.index][src_key].keys()):
             counts[self.index][src_key][dest_key] += 1
           else:
             counts[self.index][src_key][dest_key] = 1
@@ -221,8 +221,8 @@ class Anchor():
 
       curr_cell = collision.curr_cell
       new_cell = collision.new_cell   
-      if curr_cell in cell_counts.keys():
-        if new_cell in cell_counts[curr_cell].keys():
+      if curr_cell in list(cell_counts.keys()):
+        if new_cell in list(cell_counts[curr_cell].keys()):
           cell_counts[curr_cell][new_cell] += 1
         else:
           cell_counts[curr_cell][new_cell] = 1
@@ -256,7 +256,7 @@ class Collision():
     self.line = line
     linetail = line[len(VT_COLLISION)-1:] # just take the last bit of the line, the important part, but not the endline
     linelist = linetail.split(',') # split line into a list of elements
-    dictlist = map(lambda a: a.strip().split(': '), linelist) # map the line to a list of lists for dictionary conversion
+    dictlist = [a.strip().split(': ') for a in linelist] # map the line to a list of lists for dictionary conversion
     linedict = dict(dictlist) # convert the list of lists into a dictionary
     #self.src = int(linedict['current'].strip())
     self.curr_cell = int(linedict['current'].strip())
@@ -270,7 +270,7 @@ class Transition():
     self.line = line
     linetail = line[len(GRID_TRANSITION)-1:] # just take the last bit of the line, the important part, but not the endline
     linelist = linetail.split(',') # split line into a list of elements
-    dictlist = map(lambda a: a.strip().split(': '), linelist) # map the line to a list of lists for dictionary conversion
+    dictlist = [a.strip().split(': ') for a in linelist] # map the line to a list of lists for dictionary conversion
     linedict = dict(dictlist) # convert the list of lists into a dictionary
     self.src = int(linedict['source'].strip())
     self.dest = int(linedict['destination'].strip())
@@ -286,10 +286,10 @@ class Transition():
     #self.velocity_step = int(linedict['VEL_ID'].strip().split()[0])
 
   def print_status(self):
-    print "src:", self.src
-    print "dest:", self.dest
-    print "cur_step:", self.cur_step
-    print "time:", self.time
+    print("src:", self.src)
+    print("dest:", self.dest)
+    print("cur_step:", self.cur_step)
+    print("time:", self.time)
     #print "ligand_com:", self.ligand_com
     #print "receptor_com:", self.receptor_com
     #print "receptor_start_com:", self.receptor_start_com
@@ -326,7 +326,7 @@ def parse_milestoning_file(milestoning_filename):
   for branch in root:
     if branch.tag != "site": continue # make sure that we are parsing a site
     site_name = branch.find('name').text.strip()
-    print "Now parsing milestones from site:", site_name, "in XML file."
+    print("Now parsing milestones from site:", site_name, "in XML file.")
     site_obj = Site(site_counter, site_name) # create the site object
     for anchor in branch: #iterate through each anchor in the site
       if anchor.tag != "anchor": continue #ensure we are reading voronoi anchors
@@ -383,8 +383,8 @@ def add_dictionaries(dict1, dict2):
   NOTE: dict1 is updated and returned BY REFERENCE
   '''
   new_dict = dict1
-  for key in dict2.keys():
-    if key in dict1.keys():
+  for key in list(dict2.keys()):
+    if key in list(dict1.keys()):
       dict1[key] += dict2[key]
     else:
       dict1[key] = dict2[key]
@@ -450,9 +450,9 @@ def read_transition_statistics_from_files(model, verbose):
       if anchor.md == True and anchor.directory:
         #if verbose: print 'parsing md transitions for:Anchor', milestone.fullname
         #print info['max_steps']
-        print 'parsing md transitions for:Anchor', anchor.fullname
+        print('parsing md transitions for:Anchor', anchor.fullname)
         max_steps = anchor.parse_md_transitions()
-        print max_steps, total_steps
+        print(max_steps, total_steps)
         if max_steps > total_steps:
           total_steps = max_steps
         #else:
@@ -468,23 +468,23 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
   counts = {}; times = {}; total_counts = {}; total_cell_counts = {}; total_times = {}; avg_times = {}; trans = {}; total_cell_times = {}; T_a = {}
   end_indeces = [];
   N = {}
-  if verbose: print 'max_steps', max_steps 
+  if verbose: print('max_steps', max_steps) 
   for site in model.sites:
     for anchor in site.anchors:
       if anchor.md == True and anchor.directory:
-        if verbose: print 'Anchor', anchor.fullname
+        if verbose: print('Anchor', anchor.fullname)
         this_counts, this_total_counts, this_total_times, this_avg_times = anchor.get_md_transition_statistics(model.md_time_factor, max_steps)
         this_cell_counts, this_cell_time = anchor.get_md_vt_collisions(model.md_time_factor, max_steps)
         total_counts = add_dictionaries(total_counts, this_total_counts)
-        if verbose: print 'counts',  this_counts
+        if verbose: print('counts',  this_counts)
         total_cell_counts = add_dictionaries(total_cell_counts, this_cell_counts)
         total_cell_times[int(anchor.index)] = this_cell_time
-        if verbose: print 'times', this_total_times
-        if verbose: print 'cell times', total_cell_times
+        if verbose: print('times', this_total_times)
+        if verbose: print('cell times', total_cell_times)
         #total_times = add_dictionaries(total_times, this_total_times)
         #total_cell_times = add_dictionaries(total_cell_times, this_cell_times)
-        for src_key in this_counts.keys():
-          if src_key in counts.keys():
+        for src_key in list(this_counts.keys()):
+          if src_key in list(counts.keys()):
             counts[src_key] = add_dictionaries(counts[src_key], this_counts[src_key])
           else:
             counts[src_key] = this_counts[src_key]
@@ -492,8 +492,8 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
       for milestone in anchor.milestones:
         if milestone.end == "true": # then its an end milestone, and there will be no transitions out of it
           end_indeces.append(int(milestone.id))
-      for src_key in this_total_times.keys():
-        if src_key in times.keys():
+      for src_key in list(this_total_times.keys()):
+        if src_key in list(times.keys()):
           times[src_key] = add_dictionaries(times[src_key], this_total_times[src_key])
         else:
           times[src_key] = this_total_times[src_key]
@@ -533,8 +533,8 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
 
 
 
-  for cell in total_cell_counts.keys():
-    for new_cell in total_cell_counts[cell].keys():
+  for cell in list(total_cell_counts.keys()):
+    for new_cell in list(total_cell_counts[cell].keys()):
       if new_cell == -1: continue #skip transitions to bound state milestone
       elif new_cell not in end_indeces: #hard code for testing
         #print cell, ", ",  new_cell
@@ -589,10 +589,10 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
     #print delta_G[i]
 
 
-  print "Delta G: "; pprint(delta_G)
+  print("Delta G: "); pprint(delta_G)
 ## Using the V cell equilibrium probabilities, calculate the rate matrix, Q
-  if verbose: print "counts: ", counts
-  if verbose: print "times: ", times
+  if verbose: print("counts: ", counts)
+  if verbose: print("times: ", times)
 
   T_a = np.zeros(len(p_equil))
   for cell in total_cell_times:
@@ -602,9 +602,9 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
 
   N = np.zeros((len(p_equil)+1,len(p_equil)+1))
   N_conv = np.zeros((len(p_equil)+1,len(p_equil)+1))
-  for anchor in counts.keys():
-    for src in counts[anchor].keys():
-      for dest in counts[anchor][src].keys():
+  for anchor in list(counts.keys()):
+    for src in list(counts[anchor].keys()):
+      for dest in list(counts[anchor][src].keys()):
         #print p_equil[int(anchor)]
         #print counts[anchor][src][dest]
         #print total_cell_times[int(anchor)]
@@ -615,12 +615,12 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
           else:
             N_conv[src][dest] = np.nan      
 
-  if verbose: print "N:", N
+  if verbose: print("N:", N)
 
   R = np.zeros(len(p_equil)+1)
   R_conv = np.zeros((len(p_equil)+1,len(p_equil)+1))
-  for anchor in times.keys():
-    for src in times[anchor].keys(): 
+  for anchor in list(times.keys()):
+    for src in list(times[anchor].keys()): 
       R[src] += (p_equil[int(anchor)] * times[anchor][src]/ total_cell_times[int(anchor)])
       if max_steps != None:
         if total_cell_times[int(anchor)] >= max_steps* md_time_factor:
@@ -628,7 +628,7 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
         else:
           R_conv[int(anchor)][src] = np.nan
 
-  if verbose: print "R:", R
+  if verbose: print("R:", R)
 
 
   Q = np.zeros((len(p_equil)+1,len(p_equil)+1))
@@ -642,8 +642,8 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
 
 
 
-  if verbose: print ""
-  if verbose: print Q
+  if verbose: print("")
+  if verbose: print(Q)
 
 # Calculate MFPT and off rate
   
@@ -654,11 +654,11 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
   #print "k_off = ", k_off, "s-1" 
 
   total_sim_time = 0
-  for i in total_cell_times.keys():
-    print i, total_cell_times[i]/1e6, "ns"
+  for i in list(total_cell_times.keys()):
+    print(i, total_cell_times[i]/1e6, "ns")
     total_sim_time += total_cell_times[i]
 
-  print "Total simulation time: " ,  total_sim_time/1e6, "ns" 
+  print("Total simulation time: " ,  total_sim_time/1e6, "ns") 
 
   return p_equil, N, R, T, T_tot, Q, N_conv, R_conv, k_cell, 
 
@@ -700,8 +700,8 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
   N = T_tot * N_pre
   R = T_tot * R_pre
 
-  print "Q", Q.shape
-  print Q
+  print("Q", Q.shape)
+  print(Q)
   P = np.zeros((m,m))
   Q_test = np.zeros((m,m))
   tau = np.zeros(m)
@@ -762,13 +762,13 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
   # print "pi", pi
 
   # print "foo"
-  print "N", N
-  print "R", R
+  print("N", N)
+  print("R", R)
 
   Qnew = Q
-  if verbose: print "collecting ", num, " MCMC samples from ", num*(stride)+ skip, " total moves"  
+  if verbose: print("collecting ", num, " MCMC samples from ", num*(stride)+ skip, " total moves")  
   for counter in range(num*(stride)+ skip):
-    if verbose: print "MCMC stepnum: ", counter
+    if verbose: print("MCMC stepnum: ", counter)
     Qnew =  np.zeros((m,m)) #np.matrix(np.copy(T))
     for i in range(m): # rows
       for j in range(m): # columns
@@ -790,7 +790,7 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
     # while (Qnew[i][j] == 0.0 or i == j):
     #   i = random.randint(0,m-1)
     #   j = random.randint(0,m-1)
-        if verbose: print "i", i, "j", j
+        if verbose: print("i", i, "j", j)
 
 
     #if Qnew[i][j] == 0.0: 
@@ -801,8 +801,8 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
     #  continue
 
       
-        if verbose: print "q_ij", Qnew[i,j]
-        if verbose: print "q_ii", Qnew[i,i]
+        if verbose: print("q_ij", Qnew[i,j])
+        if verbose: print("q_ii", Qnew[i,i])
         Q_gamma = 0
         delta = Qnew[i,j]
         while ((delta) >= (Qnew[i,j])):# or (Qnew[i,j] - Q_gamma) >= abs(Qnew[i,i])):
@@ -810,31 +810,31 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
           #Q_gamma = gamma.rvs(a=N[i,j], scale = 1/R[i],loc = Q[i,j])
           
           delta =  Qnew[i,j] - Q_gamma
-        if verbose: print "gamma", Q_gamma
+        if verbose: print("gamma", Q_gamma)
 
         delta =  Qnew[i,j] - Q_gamma
        # delta = random.expovariate(1.0/(Qnew[i,j])) + Qnew[i,j]
-        if verbose: print "delta", delta
-        if verbose: print "Qnew[i,j]", Qnew[i,j] - delta
-        if verbose: print "Qnew[i,i]", Qnew[i,i] + delta
-        if verbose: print "N_ij", N[i,j]
-        if verbose: print "R_i", R[i]
-        if verbose: print "N_ij log(q)", N[i,j]* log(Qnew[i,j] - delta) 
-        if verbose: print "Q * R", -(Qnew[i,j] - delta) * R[i]
+        if verbose: print("delta", delta)
+        if verbose: print("Qnew[i,j]", Qnew[i,j] - delta)
+        if verbose: print("Qnew[i,i]", Qnew[i,i] + delta)
+        if verbose: print("N_ij", N[i,j])
+        if verbose: print("R_i", R[i])
+        if verbose: print("N_ij log(q)", N[i,j]* log(Qnew[i,j] - delta)) 
+        if verbose: print("Q * R", -(Qnew[i,j] - delta) * R[i])
 
         log_p_Q_old = N[i,j] * log(Qnew[i,j])  - Qnew[i,j] * R[i] #+ -Qnew[i,i] * R[i]
 
         log_p_Q_new = N[i,j] * log(Qnew[i,j] - delta) - (Qnew[i,j] - delta) * R[i] #+ -(Qnew[i,i] + delta) * R[i]
 
-        if verbose: print "log P(Q_new)", log_p_Q_new
-        if verbose: print "log P(Q_old)", log_p_Q_old
+        if verbose: print("log P(Q_new)", log_p_Q_new)
+        if verbose: print("log P(Q_old)", log_p_Q_old)
 
         r2 = random.random()  
         p_acc =  log_p_Q_new - log_p_Q_old
-        if verbose: print "p_acc", p_acc, "r", log(r2)
+        if verbose: print("p_acc", p_acc, "r", log(r2))
           
         if log(r2) <= p_acc: #log(r) can be directly compared to log-likeliehood acceptance, p_acc
-          if verbose: print "performing non-reversible element shift..."
+          if verbose: print("performing non-reversible element shift...")
             
 
           Qnew[i,i] = (Qnew[i,i]) + delta
@@ -846,12 +846,12 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
             # Qnew[i,j] = abs(Qnew[i,j]) - delta
             # Qnew[j,i] = abs(Qnew[j,i]) - (pi[i] / pi[j] * delta)
 
-          if verbose: print Qnew
+          if verbose: print(Qnew)
       #else:
         #print "reject shift"
 
     if counter < skip:
-      print "burn in step:", counter
+      print("burn in step:", counter)
       continue  
     else:
       if counter % stride == 0:
@@ -866,7 +866,7 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
 
         #Q_mats.append(Qnew)
     Q = Qnew
-  print "final MCMC matrix", Q
+  print("final MCMC matrix", Q)
   return k_off_list, running_avg, running_std #Q_mats
  
 
@@ -1075,15 +1075,15 @@ def main():
   verbose = False
   info_mode = False
   if args['verbose']:
-    print "verbose mode activated."
+    print("verbose mode activated.")
     verbose = True
 
   if args['info']:
-    print "'info' mode active, Only printing read information, not running any kinetics calculations."
+    print("'info' mode active, Only printing read information, not running any kinetics calculations.")
     info_mode = True
 
   if args['test']: # if we are just going to run the unittests, then run and exit
-    print "running Unittests..."
+    print("running Unittests...")
     runner = unittest.TextTestRunner()
     itersuite = unittest.TestLoader().loadTestsFromTestCase(Test_analyze) # because for some reason, unittest.main() doesn't work right
     runner.run(itersuite)
@@ -1101,11 +1101,11 @@ def main():
   #rand_conv= args['rand_conv']
 
   if args['off']:
-    print "Running k-off calculations."
+    print("Running k-off calculations.")
     calc_type = "off"
 
   elif args['free_energy']:
-    print "Running free energy profile calculations."
+    print("Running free energy profile calculations.")
     calc_type = "free_energy"
     assert not conv_filename, "Alert: free energy profile not currently supported in convergence mode. Please leave --conv_filename argument blank. Aborting..."
 
@@ -1114,7 +1114,7 @@ def main():
   #rand_conv= args['rand_conv']
 
   else:
-    print "Running k-on calculations."
+    print("Running k-on calculations.")
     calc_type = "on" # by default
     bd_time = 1.0
   bound_dict = parse_bound_state_args(args['bound_states'])
@@ -1161,20 +1161,20 @@ def main():
     #print k_off_list
     
     if doing_error == True:
-      print "avg k off", np.average(k_off_list)
+      print("avg k off", np.average(k_off_list))
       #print len(k_off_list) 
-      print "k_off entries:", len(k_off_list)
-      print "k_off: " , k_off," +- ", k_off_std, " s^-1" 
+      print("k_off entries:", len(k_off_list))
+      print("k_off: " , k_off," +- ", k_off_std, " s^-1") 
       plot_MCMC_conv(running_avg, running_std)
     else:
-      print "k_off: " , k_off, " s^-1" 
+      print("k_off: " , k_off, " s^-1") 
 
 
   if milestone_conv == True:
     k_conv_file = open('k_off_conv.txt', 'w')
     conv_intervals = np.arange(conv_stride, max_steps, conv_stride)
-    print conv_intervals
-    print max_steps
+    print(conv_intervals)
+    print(max_steps)
     N_conv = np.zeros((15,15,len(conv_intervals)))
     R_conv = np.zeros((15,15,len(conv_intervals)))
     k_conv = np.zeros(len(conv_intervals))
@@ -1183,7 +1183,7 @@ def main():
     for interval_index in range(len(conv_intervals)):
       p_equil, N, R, T, T_tot, Q, n_conv, r_conv, k_cell = analyze_kinetics(calc_type, model, bound_dict, doing_error=False, verbose=verbose, max_steps=conv_intervals[interval_index], bd_time=bd_time, error_number=error_number, error_skip=error_skip)
      
-      print n_conv 
+      print(n_conv) 
       MFPT = T[0]
       k_off = 1e15/MFPT
       #print conv_intervals[interval_index], ",   ", k_off
@@ -1199,7 +1199,7 @@ def main():
       k_conv[interval_index]=k_off    
       
 
-      if verbose: print p_equil_conv.shape
+      if verbose: print(p_equil_conv.shape)
       
       #k_conv_file.write(str(interval)+'\t'+(str(k_off))+'\n')
 
@@ -1214,9 +1214,9 @@ def main():
     #pprint(R_conv)
     MFPT = T[0]
     k_off = 1e15/MFPT
-    print "k_off: " , k_off, "s^-1"
+    print("k_off: " , k_off, "s^-1")
 
-    print 'conv intervals' , np.multiply(conv_intervals,2e-6)
+    print('conv intervals' , np.multiply(conv_intervals,2e-6))
     #print N_conv
     plot_conv(N_conv, R_conv, k_conv, conv_intervals, k_cell_conv, p_equil_conv)
   #else:
