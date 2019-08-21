@@ -15,7 +15,7 @@ from collections import defaultdict
 from itertools import chain
 #import pandas as pd
 import matplotlib.pyplot as plt
-plt.switch_backend('agg')
+#plt.switch_backend('agg')
 import pickle
 
 
@@ -851,7 +851,7 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
         #print "reject shift"
 
     if counter < skip:
-      print("burn in step:", counter)
+      #print("burn in step:", counter)
       continue  
     else:
       if counter % stride == 0:
