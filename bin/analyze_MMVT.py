@@ -4,7 +4,7 @@ from string import Template
 from math import exp, log
 from pprint import pprint
 import numpy as np
-from scipy.sparse import linalg as la
+from scipy import linalg as la
 from scipy.stats import gamma as gamma
 from copy import deepcopy
 import xml.etree.ElementTree as ET
@@ -655,10 +655,10 @@ def analyze_kinetics(calc_type, model, bound_dict, doing_error, verbose, bd_time
 
   total_sim_time = 0
   for i in list(total_cell_times.keys()):
-    print(i, total_cell_times[i]/1e6, "ns")
+    print(i, total_cell_times[i]*1e9, "ns")
     total_sim_time += total_cell_times[i]
 
-  print("Total simulation time: " ,  total_sim_time/1e6, "ns") 
+  print("Total simulation time: " ,  total_sim_time*1e9, "ns") 
 
   return p_equil, N, R, T, T_tot, Q, N_conv, R_conv, k_cell, 
 
@@ -671,7 +671,7 @@ def calc_MFPT_vec(Q):
   #I[:] = np.sqrt(len(Q_hat[0]))
   I[:] = 1
   
-  T= np.linalg.solve(Q_hat,-I)
+  T= la.solve(Q_hat,-I)
 
   #MFPT = T[0]
   #if verbose: print "MFPT =", T, "fs"
@@ -697,8 +697,11 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
   running_avg = []
   running_std = []
   
-  N = T_tot * N_pre
-  R = T_tot * R_pre
+  #N = T_tot * N_pre
+  #R = T_tot * R_pre
+
+  N = N_pre
+  R = R_pre
 
   print("Q", Q.shape)
   print(Q)
@@ -764,18 +767,19 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
   # print "foo"
   print("N", N)
   print("R", R)
+  print("newest version")
 
   Qnew = Q
   if verbose: print("collecting ", num, " MCMC samples from ", num*(stride)+ skip, " total moves")  
   for counter in range(num*(stride)+ skip):
     if verbose: print("MCMC stepnum: ", counter)
-    Qnew =  np.zeros((m,m)) #np.matrix(np.copy(T))
+    Qnew = np.zeros((m,m)) #np.matrix(np.copy(T))
     for i in range(m): # rows
       for j in range(m): # columns
         Qnew[i,j] = Q[i,j]
     ##Generate random variables for step
     #r1 = random.random() #genarate uniform random number for do reversible element shift
-    r2 = random.random() #genarate uniform random number for acceptance probability
+    #r2 = random.random() #genarate uniform random number for acceptance probability
     
     #print "r1", r1
     #i = 0
@@ -790,7 +794,7 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
     # while (Qnew[i][j] == 0.0 or i == j):
     #   i = random.randint(0,m-1)
     #   j = random.randint(0,m-1)
-        if verbose: print("i", i, "j", j)
+        #if verbose: print("i", i, "j", j)
 
 
     #if Qnew[i][j] == 0.0: 
@@ -801,8 +805,8 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
     #  continue
 
       
-        if verbose: print("q_ij", Qnew[i,j])
-        if verbose: print("q_ii", Qnew[i,i])
+        #if verbose: print("q_ij", Qnew[i,j])
+        #if verbose: print("q_ii", Qnew[i,i])
         Q_gamma = 0
         delta = Qnew[i,j]
         while ((delta) >= (Qnew[i,j])):# or (Qnew[i,j] - Q_gamma) >= abs(Qnew[i,i])):
@@ -810,17 +814,17 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
           #Q_gamma = gamma.rvs(a=N[i,j], scale = 1/R[i],loc = Q[i,j])
           
           delta =  Qnew[i,j] - Q_gamma
-        if verbose: print("gamma", Q_gamma)
+        #if verbose: print("gamma", Q_gamma)
 
-        delta =  Qnew[i,j] - Q_gamma
+        #delta =  Qnew[i,j] - Q_gamma
        # delta = random.expovariate(1.0/(Qnew[i,j])) + Qnew[i,j]
-        if verbose: print("delta", delta)
-        if verbose: print("Qnew[i,j]", Qnew[i,j] - delta)
-        if verbose: print("Qnew[i,i]", Qnew[i,i] + delta)
-        if verbose: print("N_ij", N[i,j])
-        if verbose: print("R_i", R[i])
-        if verbose: print("N_ij log(q)", N[i,j]* log(Qnew[i,j] - delta)) 
-        if verbose: print("Q * R", -(Qnew[i,j] - delta) * R[i])
+        #if verbose: print("delta", delta)
+        #if verbose: print("Qnew[i,j]", Qnew[i,j] - delta)
+        #if verbose: print("Qnew[i,i]", Qnew[i,i] + delta)
+        #if verbose: print("N_ij", N[i,j])
+        #if verbose: print("R_i", R[i])
+        #if verbose: print("N_ij log(q)", N[i,j]* log(Qnew[i,j] - delta)) 
+        #if verbose: print("Q * R", -(Qnew[i,j] - delta) * R[i])
 
         log_p_Q_old = N[i,j] * log(Qnew[i,j])  - Qnew[i,j] * R[i] #+ -Qnew[i,i] * R[i]
 
@@ -831,10 +835,10 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
 
         r2 = random.random()  
         p_acc =  log_p_Q_new - log_p_Q_old
-        if verbose: print("p_acc", p_acc, "r", log(r2))
+        #if verbose: print("p_acc", p_acc, "r", log(r2))
           
         if log(r2) <= p_acc: #log(r) can be directly compared to log-likeliehood acceptance, p_acc
-          if verbose: print("performing non-reversible element shift...")
+          #if verbose: print("performing non-reversible element shift...")
             
 
           Qnew[i,i] = (Qnew[i,i]) + delta
@@ -850,15 +854,15 @@ def monte_carlo_milestoning_error(Q0, N_pre, R_pre, p_equil, T_tot, num = 1000, 
       #else:
         #print "reject shift"
 
-    if counter < skip:
+    #if counter < skip:
       #print("burn in step:", counter)
-      continue  
-    else:
-      if counter % stride == 0:
+    #  continue  
+    #else:
+    if counter > skip and counter % stride == 0:
         T_err = calc_MFPT_vec(Qnew)
           #print "T", T_err
           #mfpt_list.append(T_err[0])
-        k_off_list.append(1e15/T_err[0])
+        k_off_list.append(1/T_err[0])
         running_avg.append(np.average(k_off_list))
         running_std.append(np.std(k_off_list))
         #mfpt_std = np.std(mfpt_list)
@@ -1185,7 +1189,7 @@ def main():
      
       print(n_conv) 
       MFPT = T[0]
-      k_off = 1e15/MFPT
+      k_off = 1/MFPT
       #print conv_intervals[interval_index], ",   ", k_off
 
       for index, x in np.ndenumerate(n_conv):
@@ -1213,7 +1217,7 @@ def main():
     #pprint(N_conv)
     #pprint(R_conv)
     MFPT = T[0]
-    k_off = 1e15/MFPT
+    k_off = 1/MFPT
     print("k_off: " , k_off, "s^-1")
 
     print('conv intervals' , np.multiply(conv_intervals,2e-6))
