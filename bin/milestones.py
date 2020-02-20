@@ -636,7 +636,7 @@ class Test_milestones(unittest.TestCase):
   #def generate_concentric_spheres(r,x,y,z,vx,vy,vz,increment, siteid, site_index, k_off, startvx = 0.0, startvy = 0.0, startvz = 0.0, absolute='False', r_low=1):
   def test_generate_concentric_spheres(self):
     #return # temporary until we get this unittest fixed
-    test_milestones = generate_concentric_spheres(10.0, 0, 0, 0, 1, 1, 1, 2.0, 1, 1, False, r_low=2.0)
+    test_milestones = generate_concentric_spheres(10.0, 0, 0, 0, 1, 1, 1, 2.0, "1", 1, False, r_low=2.0)
     self.assertEqual(len(test_milestones),6)
     self.assertTrue(test_milestones[0].end)
     self.assertFalse(test_milestones[2].end)
@@ -644,7 +644,7 @@ class Test_milestones(unittest.TestCase):
 
   #def generate_concentric_spheres_atom(r, atomid, x, y, z, vx, vy, vz, increment, siteid, site_index, k_off, startvx = 0.0, startvy = 0.0, startvz = 0.0, absolute='False', r_low=1):
   def test_generate_concentric_spheres_atom(self):
-    test_milestones = generate_concentric_spheres_atom(10.0, 234, 0, 0, 0, 1, 1, 1, 2.0, 1, 1, False, r_low=2.0)
+    test_milestones = generate_concentric_spheres_atom(10.0, 234, 0, 0, 0, 1, 1, 1, 2.0, "1", 1, False, r_low=2.0)
     self.assertEqual(len(test_milestones),6)
     self.assertTrue(test_milestones[0].end)
     self.assertFalse(test_milestones[2].end)
@@ -652,7 +652,7 @@ class Test_milestones(unittest.TestCase):
 
   #def generate_concentric_spheres_atom_with_rotations(r, atomid, x, y, z, vx, vy, vz, increment, siteid, site_index, k_off, hedron, startvx = 0.0, startvy = 0.0, startvz = 0.0, absolute='False', r_low=1):
   def test_generate_concentric_spheres_atom_with_rotations(self):
-    test_milestones = generate_concentric_spheres_atom_with_rotations(10.0, 234, 0, 0, 0, 1, 1, 1, 2.0, 1, 1, False, 'tesseract', r_low=2.0)
+    test_milestones = generate_concentric_spheres_atom_with_rotations(10.0, 234, 0, 0, 0, 1, 1, 1, 2.0, "1", 1, False, 'tesseract', r_low=2.0)
     self.assertEqual(len(test_milestones),13)
     self.assertTrue(test_milestones[0].end)
     self.assertFalse(test_milestones[2].end)
