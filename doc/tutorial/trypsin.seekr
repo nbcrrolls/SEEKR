@@ -1,0 +1,166 @@
+# SEEKR input file
+##############################################################
+# project details
+##############################################################
+project_name tryp   # the name of the project
+rootdir /u1/bjagger/seekr_test3   # a directory to write all the MD and BD files
+test_mode False   # reduces the calculation time by restricting input size. Use only for debugging SEEKR
+md True   # whether there is an MD phase
+bd True   # whether there is a BD phase
+k_off False   # whether this is a k-off calculation
+empty_rootdir True   # if set to True will empty the contents of the rootdir when the new file tree is made
+tclforcesscript ../../../milestoning.tcl   # a path that NAMD to for the milestoning TCL script
+
+master_temperature 298   # the master temperature of all calculations
+
+ens_equil_len 10000000 # number of timesteps for the umbrella sampling stage
+number_of_ens_equil_frames 10000 # number of frames to write after the ens_equil_simulations
+number_of_ens_equil_frames_skipped 3000 # how many dcd frames to skip at the beginning to ensure some convergence at the beginning of the umbrella sampling
+extract_stride 1
+
+##############################################################
+#Program path information
+##############################################################
+#browndye_bin_dir SOMETHING # the path to the browndye bin
+#apbs_executable SOMETHING
+
+##############################################################
+# ligand/receptor information
+##############################################################
+lig_pdb_filename benzamidine.pdb
+lig_pqr_filename benzamidine.pqr
+rec_pdb_filename tryp_wet_lastframe.pdb
+#rec_psf_filename SOMETHING
+rec_dry_pdb_filename tryp_dry_lastframe.pdb
+rec_dry_pqr_filename tryp_dry_lastframe.pqr
+
+##############################################################
+# NAMD TCL script parameters
+##############################################################
+script_interval 5
+abort_on_crossing True
+ligrange 3222 to 3239  # what actually defines the ligand
+lig_com_indeces 3222 to 3239  # the residues we monitor for center of mass in the simulation
+recrange 1 to 3220
+rec_com_indeces  5 24 40 47 54 75 89 99 106 116 130 144 168 174 195 212 228 239 258 272 283 290 311 328 348 358 365 372 383 402 421 435 446 463 487 503 519 530 540 550 567 577 598 620 631 638 657 674 690 714 733 740 755 767 781 800 814 830 846 861 868 882 897 914 934 953 964 974 985 1007 1018 1037 1053 1078 1084 1095 1116 1130 1141 1155 1169 1188 1202 1216 1228 1247 1264 1283 1302 1324 1343 1365 1376 1386 1396 1407 1426 1440 1451 1475 1491 1501 1512 1531 1542 1569 1575 1589 1600 1610 1620 1631 1641 1648 1662 1679 1689 1708 1727 1738 1745 1769 1776 1790 1804 1826 1837 1848 1855 1869 1880 1909 1915 1927 1943 1962 1984 1994 2013 2035 2053 2059 2078 2097 2108 2120 2131 2142 2152 2174 2185 2195 2224 2230 2237 2254 2273 2287 2298 2312 2329 2349 2359 2369 2376 2397 2416 2431 2438 2445 2467 2479 2490 2500 2517 2524 2536 2547 2554 2569 2575 2591 2607 2617 2628 2635 2657 2676 2693 2700 2719 2735 2746 2770 2777 2788 2795 2805 2815 2832 2854 2868 2898 2904 2911 2927 2948 2962 2984 3000 3010 3024 3045 3061 3072 3096 3115 3137 3154 3168 3187 3197 3208
+
+##############################################################
+# Active sites containing milestones
+##############################################################
+site1 [
+  anchor_function concentric_spheres_atom,
+  r 14.0,
+  r_low 1.0,
+  x -1.536,
+  y 13.860,
+  z 16.540,
+  atomid 2479 2490 2500 2536 2719 2746 2770 2788 2795 2868 2927,
+  vx -5.741,
+  vy 62.072,
+  vz 18.440,
+  startvx -5.741,
+  startvy 62.072,
+  startvz 18.440,
+  increment 1.0,
+  radius_list 1 1.5 2 2.5 3 4 6 8 10 12 14,
+  ]
+
+# site2 [ ....
+
+##############################################################
+# Ligand positions/orientations
+##############################################################
+hedron single # can be: single, simplex, tesseract, 24-cell, random, ... (more to come perhaps)
+#align_lig_to_pa False
+reject_clashes True # True: run a check to see whether ligand/receptor structures are clashing, False: disregard clashes
+
+##############################################################
+# MD Parameters
+##############################################################
+ff amber
+
+# LEAP
+leap_preload_commands [
+  	source leaprc.protein.ff14SB,
+        source leaprc.gaff,
+        source leaprc.water.tip4pew,
+        set default FlexibleWater on,
+        set default PBRadii mbondi2,
+        loadoff Ca2.lib,
+        loadoff benzamidine.lib,
+        loadamberparams benzamidine.frcmod,
+        WAT= T4E,
+        HOH= T4E,
+        loadAmberParams frcmod.ionsjc_tip4pew,
+        loadAmberParams frcmod.tip4pew,
+      ]
+leap_postload_commands [
+        bond holo.7.SG holo.137.SG,
+        bond holo.25.SG holo.41.SG,
+        bond holo.109.SG holo.210.SG,
+        bond holo.116.SG holo.183.SG,
+        bond holo.148.SG holo.162.SG,
+        bond holo.173.SG holo.197.SG,
+        charge holo,
+        check holo,
+      ]
+leap_program tleap
+
+# MIN
+min True
+min_constrained ['ligand','receptor'] # list what parts of the structure will be constrained during minimizations, including "ligand" (values taken from tcl ['lig_indeces'], above), "receptor" (values taken from tcl['rec_indeces']), or a list of all indeces in the pdb file you want constrained
+min_num_steps 5000 # number of minimization steps
+min_out_freq 500
+min_ensemble nve # irrelevant for minimizations, but necessary for the program
+
+# TEMP_EQUIL
+temp_equil True
+temp_equil_constrained [ 'ligand', 'receptor' ] # same as above
+temp_equil_peak_temp 350	# defines how the temperature will be adjusted up and then back
+temp_equil_temp_increment 10
+temp_equil_num_steps 1000 # number of steps per temperature increment
+temp_equil_ensemble nvt
+
+# ENS_EQUIL
+ens_equil True # whether we will run constrained runs for ensemble equilibrations
+ens_equil_colvars True # whether collective variables should be imposed between the ligand and the receptor. If set to True, 'constrained' list above must be empty.
+ens_equil_colvar_sel [ 'ligand', 'receptor' ] # list of what parts of the system will have collective variables imposed. Options include 'ligand', 'receptor', 'water', 'relative' (for relative colvars between ligand/receptor), or a list of all indeces in pdb to be constrained
+ens_equil_colvar_force 90.0 # kcal/mol
+ens_equil_colvarstrajfrequency 100000
+ens_equil_colvarsrestartfrequency 100000
+ens_equil_colvar_ligand_indeces 3234 to 3251
+ens_equil_colvar_receptor_indeces 2479 2490 2500 2536 2719 2746 2770 2788 2795 2868 2927
+ens_equil_ensemble nvt
+
+# FORWARD and REVERSAL
+fwd_rev_ensemble nve
+fwd_rev_type protein # can be 'protein', 'membrane'
+fwd_rev_dcdfreq 1000
+fwd_rev_restart_freq 1000
+fwd_rev_run_freq 1000
+fwd_rev_launches_per_config 1 # how many members of the distribution to launch per position. The velocity is re-initiated with each of these.
+fwd_rev_frame_chunk_size 1700 # how many frames to submit to the replicas at any one time. If this number is too large (>10000), then memory overflows can occur.
+
+
+
+##############################################################
+# BD Parameters
+##############################################################
+
+bd_threads 7
+bd_prods_per_anchor 1000000
+#bd_calc_electrostatics SOMETHING
+bd_rec_pqr_filename tryp_dry_lastframe.pqr
+
+##############################################################
+# APBS Parameters
+##############################################################
+ion1rad 1.6700
+ion2rad 1.5700
+ion1conc 0.02
+ion2conc 0.02
+lpbe_npbe npbe
+inputgen_fadd 130.0
+inputgen_cfac 5.0
+
+
