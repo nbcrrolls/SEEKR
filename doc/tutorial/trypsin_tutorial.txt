@@ -14,6 +14,7 @@ We will go through one by one to change them to desired values:
 set 'project_name' to 'tryp'
 set 'root_dir' to a directory to construct the file tree. It should be someplace you don't mind running simulations from and containing large trajectory files, like a scratch directory. I will be refering to this directory as trypsin_project_directory from now on.
 set 'master_temperature' to '298'. This is the temperature used for all simulations and calculations (except temperature equilibration)
+set 'tclforcesscript' with the complete path to  SEEKR/bin/milestoning.tcl
 set 'ens_equil_len' to '10000000'. This will be how many timesteps the umbrella sampling equilibrations will be. Of course, the longer the better, but must be carefully balanced among the milestones according to available computing resources. Umbrella sampling equilibrations seem to be the greatest cost in these SEEKR calculations.
 set 'number_of_ens_equil_frames' to '10000'. This many frames will be written to the DCD files during the umbrella sampling equilibrations (assuming the runs finish). The 'dcdfreq' parameters are automatically set and so are other parameters elsewhere in the calculation.
 set 'number_of_ens_equil_frames_skipped' to '3000'. It's probably a good idea to skip some initial amount of time in the umbrella sampling simulations. This tells how many of the DCD frames to skip.
@@ -97,7 +98,8 @@ Set 'reject_clashes' to 'True'. This will ensure that there are no steric clashe
 
 Set 'ff' to 'amber'.
 
-set 'water model' to 'tip4p'
+set 'watermodel' to 'tip4p'
+set 'cell_shape' to 'oct' because our box is a truncated octahedron in this case
 
 Now we need to fill out the LEAP commands. You can do this by hand by entering values into the 'leap_preload_commands' and 'leap_postload_commands' parameters, or by using 'sample_leap_file' and providing a sample LEAP script that SEEKR can use to parse the locations and specifics of generating a holo structure.
 
@@ -425,7 +427,7 @@ Of course, you might use a different anchor index. You will need to enter the en
 
 Once the umbrella sampling stage is complete, it's time to start the fwd_rev stage. This is the trickiest of all. You can control this stage using control.py also.
 
-Obtain the milestoning.tcl file from the SEEKR directory and place it into the trypsin_project_directory you determined in your input file.
+Obtain the milestoning.tcl file from the SEEKR directory and place it into the trypsin_project_directory you determined in your input file. If you specified the path to /SEEKR/bin/ you can leave it there (but other locations may be more convenient for running on HPC systems)
 
 Then, you will need to obtain or compile a special build of NAMD2 as well as a program called Charm++.
 
