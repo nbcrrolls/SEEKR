@@ -3,7 +3,7 @@
 # project details
 ##############################################################
 project_name tryp   # the name of the project
-rootdir /u1/bjagger/seekr_test3   # a directory to write all the MD and BD files
+rootdir /u1/bjagger/seekr_test4   # a directory to write all the MD and BD files
 test_mode False   # reduces the calculation time by restricting input size. Use only for debugging SEEKR
 md True   # whether there is an MD phase
 bd True   # whether there is a BD phase
@@ -73,7 +73,8 @@ site1 [
 hedron single # can be: single, simplex, tesseract, 24-cell, random, ... (more to come perhaps)
 #align_lig_to_pa False
 reject_clashes True # True: run a check to see whether ligand/receptor structures are clashing, False: disregard clashes
-
+cell_shape oct
+watermodel tip4p
 ##############################################################
 # MD Parameters
 ##############################################################
