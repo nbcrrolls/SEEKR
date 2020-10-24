@@ -15,7 +15,7 @@ from numpy import arange
 from copy import deepcopy # needed to keep track of separate structure objects
 import time, random
 from math import sqrt, sin, cos, ceil, floor, log10, atan2, pi, asin
-from MDAnalysis import *
+#from MDAnalysis import *
 from random import random
 from subprocess import call
 import os

@@ -2,10 +2,10 @@
 ##############################################################
 # project details
 ##############################################################
-project_name tryp   # the name of the project
-rootdir /u1/bjagger/seekr_test4   # a directory to write all the MD and BD files
+project_name tryp_tut   # the name of the project
+rootdir /home/lvotapka/seekr_test4   # a directory to write all the MD and BD files
 test_mode False   # reduces the calculation time by restricting input size. Use only for debugging SEEKR
-md True   # whether there is an MD phase
+md False   # whether there is an MD phase
 bd True   # whether there is a BD phase
 k_off False   # whether this is a k-off calculation
 empty_rootdir True   # if set to True will empty the contents of the rootdir when the new file tree is made
@@ -27,12 +27,12 @@ extract_stride 1
 ##############################################################
 # ligand/receptor information
 ##############################################################
-lig_pdb_filename benzamidine.pdb
-lig_pqr_filename benzamidine.pqr
-rec_pdb_filename tryp_wet_lastframe.pdb
+lig_pdb_filename ../doc/tutorial/benzamidine.pdb
+lig_pqr_filename ../doc/tutorial/benzamidine.pqr
+rec_pdb_filename ../doc/tutorial/tryp_wet_lastframe.pdb
 #rec_psf_filename SOMETHING
-rec_dry_pdb_filename tryp_dry_lastframe.pdb
-rec_dry_pqr_filename tryp_dry_lastframe.pqr
+rec_dry_pdb_filename ../doc/tutorial/tryp_dry_lastframe.pdb
+rec_dry_pqr_filename ../doc/tutorial/tryp_dry_lastframe.pqr
 
 ##############################################################
 # NAMD TCL script parameters
@@ -151,7 +151,7 @@ fwd_rev_frame_chunk_size 1700 # how many frames to submit to the replicas at any
 bd_threads 7
 bd_prods_per_anchor 1000000
 #bd_calc_electrostatics SOMETHING
-bd_rec_pqr_filename tryp_dry_lastframe.pqr
+bd_rec_pqr_filename ../doc/tutorial/tryp_dry_lastframe.pqr
 
 ##############################################################
 # APBS Parameters
@@ -161,7 +161,7 @@ ion2rad 1.5700
 ion1conc 0.02
 ion2conc 0.02
 lpbe_npbe npbe
-inputgen_fadd 130.0
+inputgen_fadd 130
 inputgen_cfac 5.0
 
 

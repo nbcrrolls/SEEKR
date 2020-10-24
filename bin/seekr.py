@@ -12,7 +12,7 @@ import pdb2 as pdb
 import milestones
 import positions_orient
 import filetree
-import md
+#import md
 import bd
 import numpy as np
 import unittest
@@ -254,7 +254,7 @@ if not os.path.isdir(inp['rootdir']): # if the rootdir doesn't exist yet
 # find the recrange and ligrange values
 
 
-if md:
+if True:
   tcl={ # all variables that will go into the tcl script
     'script_interval':inp['script_interval'],
     'abort_on_crossing':inp['abort_on_crossing'],
