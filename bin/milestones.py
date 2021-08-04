@@ -13,6 +13,7 @@ from numpy import arange
 from math import sqrt, sin, cos, ceil, log10, atan2, pi
 import cmath
 import unittest
+import re
 
 import xml.etree.cElementTree as ET
 from xml.dom.minidom import Document
@@ -66,6 +67,7 @@ class Milestone():
     self.neighbors = []
     self.index = index
     self.siteid = siteid
+    self.sitenum= int(re.split('(\d+)',siteid)[1])
     self.center_type = center_type
     self.dimensions = dimensions
     self.absolute = absolute
@@ -287,7 +289,7 @@ def generate_concentric_spheres_atom(r, atomid, x, y, z, vx, vy, vz, increment, 
     milestones.append(milestone)
     total_spherical_milestones += 1
 
-  # generate one rotational milestone
+  #  generate one rotational milestone
   anchor = [1,0,0,0]
   dimensions = {}
   index = len(sphere_radii)
@@ -527,6 +529,7 @@ def split_milestones_by_site(milestone_list): # splits the given list into a lis
     if milestone.siteid != cur_siteid: # if we have a new siteid
       site_list.append(cur_site) # then append off this siteid list and begin anew
       cur_site = []
+      cur_siteid = milestone.siteid
     cur_site.append(milestone) # at any rate, add this milestone to the current list of site id's
   site_list.append(cur_site)
   return site_list
@@ -567,7 +570,6 @@ def main(settings):
     milestone_list += milestones
     site_list.append(milestones)
     site_index += 1
-
   #write_milestone_file(site_list, milestone_filename, master_temperature) # commented out because this will be written later when the filetree is created and we know the names of the directories
 
   return milestone_list
@@ -634,7 +636,7 @@ class Test_milestones(unittest.TestCase):
   #def generate_concentric_spheres(r,x,y,z,vx,vy,vz,increment, siteid, site_index, k_off, startvx = 0.0, startvy = 0.0, startvz = 0.0, absolute='False', r_low=1):
   def test_generate_concentric_spheres(self):
     #return # temporary until we get this unittest fixed
-    test_milestones = generate_concentric_spheres(10.0, 0, 0, 0, 1, 1, 1, 2.0, 1, 1, False, r_low=2.0)
+    test_milestones = generate_concentric_spheres(10.0, 0, 0, 0, 1, 1, 1, 2.0, "1", 1, False, r_low=2.0)
     self.assertEqual(len(test_milestones),6)
     self.assertTrue(test_milestones[0].end)
     self.assertFalse(test_milestones[2].end)
@@ -642,7 +644,7 @@ class Test_milestones(unittest.TestCase):
 
   #def generate_concentric_spheres_atom(r, atomid, x, y, z, vx, vy, vz, increment, siteid, site_index, k_off, startvx = 0.0, startvy = 0.0, startvz = 0.0, absolute='False', r_low=1):
   def test_generate_concentric_spheres_atom(self):
-    test_milestones = generate_concentric_spheres_atom(10.0, 234, 0, 0, 0, 1, 1, 1, 2.0, 1, 1, False, r_low=2.0)
+    test_milestones = generate_concentric_spheres_atom(10.0, 234, 0, 0, 0, 1, 1, 1, 2.0, "1", 1, False, r_low=2.0)
     self.assertEqual(len(test_milestones),6)
     self.assertTrue(test_milestones[0].end)
     self.assertFalse(test_milestones[2].end)
@@ -650,7 +652,7 @@ class Test_milestones(unittest.TestCase):
 
   #def generate_concentric_spheres_atom_with_rotations(r, atomid, x, y, z, vx, vy, vz, increment, siteid, site_index, k_off, hedron, startvx = 0.0, startvy = 0.0, startvz = 0.0, absolute='False', r_low=1):
   def test_generate_concentric_spheres_atom_with_rotations(self):
-    test_milestones = generate_concentric_spheres_atom_with_rotations(10.0, 234, 0, 0, 0, 1, 1, 1, 2.0, 1, 1, False, 'tesseract', r_low=2.0)
+    test_milestones = generate_concentric_spheres_atom_with_rotations(10.0, 234, 0, 0, 0, 1, 1, 1, 2.0, "1", 1, False, 'tesseract', r_low=2.0)
     self.assertEqual(len(test_milestones),13)
     self.assertTrue(test_milestones[0].end)
     self.assertFalse(test_milestones[2].end)

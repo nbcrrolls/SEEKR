@@ -15,7 +15,7 @@ from numpy import arange
 from copy import deepcopy # needed to keep track of separate structure objects
 import time, random
 from math import sqrt, sin, cos, ceil, floor, log10, atan2, pi, asin
-from MDAnalysis import *
+#from MDAnalysis import *
 from random import random
 from subprocess import call
 import os
@@ -431,6 +431,7 @@ def decompose_milestones(milestones):
   index_list = []
   positional_milestones = []
   rotational_milestones = []
+  site_counter = 0
   for milestone in milestones:
     if milestone.shape in ["sphere","plane"]:
       positional_milestones.append(milestone)
@@ -449,11 +450,12 @@ def decompose_milestones(milestones):
     sites.append(pos.siteid)
     fullname = "%d_%d_%s_%.1f_%.1f_%.1f_%d" % (total_counter, pos_counter, pos.siteid, pos.anchor[0], pos.anchor[1], pos.anchor[2], rot_counter)
     fullnames.append(fullname)
-    index_list.append((pos.index, rot.index))
+    index_list.append((pos.index, rot.index, pos.sitenum))
     rot_counter += 1
     total_counter += 1
     pos_counter += 1
 
+  print "index_list", index_list
   return locations, quaternions, fullnames, sites, index_list
 
 def main(settings): # NOTE: will need to include other arguments: traj, etc...

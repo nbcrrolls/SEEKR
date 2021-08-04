@@ -15,7 +15,7 @@ from copy import deepcopy # needed to keep track of separate structure objects
 import namd_inputs # contains all the details for the namd input files
 import colvars
 import psfmerge
-import  MDAnalysis as mda #import *
+#import MDAnalysis as mda #import *
 from adv_template import Adv_template, File_template
 import unittest
 import positions_orient

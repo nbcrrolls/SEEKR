@@ -607,7 +607,7 @@ def clip_matrix(left, right, bottom, top, near, far, perspective=False):
     >>> numpy.dot(M, [frustrum[0], frustrum[2], frustrum[4], 1])
     array([-1., -1., -1.,  1.])
     >>> numpy.dot(M, [frustrum[1], frustrum[3], frustrum[5], 1])
-    array([ 1.,  1.,  1.,  1.])
+    array([1., 1., 1., 1.])
     >>> M = clip_matrix(perspective=True, *frustrum)
     >>> v = numpy.dot(M, [frustrum[0], frustrum[2], frustrum[4], 1])
     >>> v / v[3]
@@ -899,9 +899,9 @@ def affine_matrix_from_points(v0, v1, shear=True, scale=True, usesvd=True):
     >>> v0 = [[0, 1031, 1031, 0], [0, 0, 1600, 1600]]
     >>> v1 = [[675, 826, 826, 677], [55, 52, 281, 277]]
     >>> affine_matrix_from_points(v0, v1)
-    array([[   0.14549,    0.00062,  675.50008],
-           [   0.00048,    0.14094,   53.24971],
-           [   0.     ,    0.     ,    1.     ]])
+    array([[  0.14549,   0.00062, 675.50008],
+           [  0.00048,   0.14094,  53.24971],
+           [  0.     ,   0.     ,   1.     ]])
     >>> T = translation_matrix(numpy.random.random(3)-0.5)
     >>> R = random_rotation_matrix(numpy.random.random(3))
     >>> S = scale_matrix(random.random())
@@ -1403,7 +1403,7 @@ def quaternion_imag(quaternion):
     """Return imaginary part of quaternion.
 
     >>> quaternion_imag([3, 0, 1, 2])
-    array([ 0.,  1.,  2.])
+    array([0., 1., 2.])
 
     """
     return numpy.array(quaternion[1:4], dtype=numpy.float64, copy=True)

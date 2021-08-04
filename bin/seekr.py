@@ -12,7 +12,7 @@ import pdb2 as pdb
 import milestones
 import positions_orient
 import filetree
-import md
+#import md
 import bd
 import numpy as np
 import unittest
@@ -258,7 +258,7 @@ if not os.path.isdir(inp['rootdir']): # if the rootdir doesn't exist yet
 # find the recrange and ligrange values
 
 
-if md:
+if True:
   tcl={ # all variables that will go into the tcl script
     'script_interval':inp['script_interval'],
     'abort_on_crossing':inp['abort_on_crossing'],
@@ -496,6 +496,8 @@ if test_mode:
   raw_milestone_list=raw_milestone_list[-1:] # reduces input size
   pos_settings['quaternion_method'] = inp['hedron'] # only one rotation, just to make things faster
 
+
+site_list = milestones.split_milestones_by_site(raw_milestone_list)
 pos_settings_all = dict(pos_settings.items() + struct.items() + [('milestone_list',raw_milestone_list)])
 wet_configs, lig_configs, pos_rot_combo, insert_index, last_ligand_index = positions_orient.main(pos_settings_all) # wet_configs: ligand+receptor structures, lig_configs: ligand configs only
 
@@ -530,13 +532,15 @@ if tcl['rec_com_indeces'].lower() == 'auto_ca':
   #print "REPLACING rec_com_indeces with:", tcl['rec_com_indeces']
 
 # need to filter out the members of milestone_list so we are only including the members that have been included in the configs
-print "position/rotation index combinations:", pos_rot_combo
+print "position/rotation/site index combinations:", pos_rot_combo
 milestone_pos_rot_list = [] # contains pairs of milestone objects for position and rotation
+#milestone_pos_rot_site_list = []
 #milestone_pos_rot_list_indeces = [] # same as above, except contains the milestone indeces
 for index_pair in pos_rot_combo:
-  pos_index = index_pair[0]; rot_index = index_pair[1]
+  pos_index = index_pair[0]; rot_index = index_pair[1]; site_index = index_pair[2]-1
   #milestone_list.append(raw_milestone_list[index])
-  milestone_pos_rot_list.append((raw_milestone_list[pos_index],raw_milestone_list[rot_index]))
+  #milestone_pos_rot_list.append((raw_milestone_list[pos_index],raw_milestone_list[rot_index]))
+  milestone_pos_rot_list.append((site_list[site_index][pos_index],site_list[site_index][rot_index]))
   #milestone_pos_rot_list_indeces.append((pos_index,rot_index))
 
 filetree_settings={ # settings for the filetree
@@ -550,7 +554,7 @@ filetree_settings={ # settings for the filetree
 
 filetree_settings_all=dict(filetree_settings.items() + sys_params.items())
 config_dirlist, md_file_paths, bd_file_paths, raw_milestone_list=filetree.main(filetree_settings_all)
-site_list = milestones.split_milestones_by_site(raw_milestone_list)
+#site_list = milestones.split_milestones_by_site(raw_milestone_list)
 milestones.write_milestone_file(site_list, milestone_settings['milestone_filename'], master_temperature, md_time_factor, bd_time_factor)
 
 if boolean(inp['ens_equil_colvars']):

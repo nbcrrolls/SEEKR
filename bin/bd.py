@@ -210,6 +210,7 @@ for arg in args: # for each pqr file
   # 2b.  make bd input file
   recname = receptor_pqrxml.split('.')[0]
   recdx = os.path.join(recname+'.pqr.dx')
+  borndx = "born-"+recname+".pqr.dx"
   rxnfile = os.path.join('../..',rxns)
   new_input = input_template.substitute(REC=recname, RECDX=recdx, RECPQRXML=receptor_pqrxml, LIG=ligname, NTRAJ=ntraj, RXN=rxnfile, RANDOM=int(10000*random.random()))
   if not os.path.exists(os.path.join(dirname, receptor_pqrxml)): os.link(receptor_pqrxml, os.path.join(dirname, receptor_pqrxml)) # a link for the pqrxml
@@ -228,6 +229,9 @@ for arg in args: # for each pqr file
   print "running command", cmd
   os.system(cmd)
 
+  # deleting dx files so as not to take up so much space
+  os.system("rm "+borndx)
+  os.system("rm "+recdx)
 
   os.chdir('../..')
 
