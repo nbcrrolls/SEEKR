@@ -26,6 +26,10 @@ import argparse
 # define all SEEKR parameters passed to other programs
 ########################################################################################
 
+print("THIS SOFTWARE IS DEPRECATED AND WILL NO LONGER BE SUPPORTED. Instead,"\
+"consider using SEEKR2 which has all the features of this program along with"\
+"many improvements. SEEKR2 can be found at "\
+"https://github.com/seekrcentral/seekr2.git")
 
 def boolean(arg):
   if str(arg).lower() in ("false","", "0", "0.0", "[]", "()", "{}"):

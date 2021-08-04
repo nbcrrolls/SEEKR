@@ -16,6 +16,10 @@ SEEKR: Simulation-Enabled Estimation of Kinetic Rates
 Introduction
 ------------
 
+WARNING: THIS SOFTWARE IS DEPRECATED AND WILL NO LONGER BE SUPPORTED. Instead,
+consider using SEEKR2 which has all the features of this program along with
+many improvements. SEEKR2 can be found at https://github.com/seekrcentral/seekr2.git
+
 SEEKR (http://amarolab.ucsd.edu/seekr/) is a suite of open-source scripts and 
 tools designed to enable researchers to perform multiscale computation of the 
 kinetics of molecular binding, unbinding, and transport using a combination 
